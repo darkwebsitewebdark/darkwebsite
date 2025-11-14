@@ -1034,6 +1034,61 @@ export const appRouter = router({
         return dispute;
       }),
   }),
+
+  // Image Upload Router
+  image: router({
+    upload: protectedProcedure
+      .input(
+        z.object({
+          image: z.string(), // base64 encoded image
+          prefix: z.enum(["profiles", "products", "id-cards", "chat"]),
+          resize: z
+            .object({
+              width: z.number(),
+              height: z.number(),
+            })
+            .optional(),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        const { uploadImage } = await import("./image");
+        return uploadImage(input.image, ctx.user.id, input.prefix, {
+          resize: input.resize,
+        });
+      }),
+
+    uploadMultiple: protectedProcedure
+      .input(
+        z.object({
+          images: z.array(z.string()).max(10), // max 10 images
+          prefix: z.enum(["profiles", "products", "id-cards", "chat"]),
+          resize: z
+            .object({
+              width: z.number(),
+              height: z.number(),
+            })
+            .optional(),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        const { uploadMultipleImages } = await import("./image");
+        return uploadMultipleImages(input.images, ctx.user.id, input.prefix, {
+          resize: input.resize,
+        });
+      }),
+
+    delete: protectedProcedure
+      .input(
+        z.object({
+          key: z.string(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const { deleteImage } = await import("./image");
+        await deleteImage(input.key);
+        return { success: true };
+      }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;

@@ -128,3 +128,15 @@
 - [ ] จัดทำเอกสาร API Documentation
 - [ ] ส่งมอบ URL เว็บไซต์
 - [ ] ส่งมอบข้อมูล Admin Account
+
+## Phase 14: Image Upload & Storage System
+- [x] Backend: ติดตั้ง S3 Storage helpers
+- [x] Backend: สร้าง API uploadImage
+- [x] Backend: สร้าง API deleteImage
+- [x] Backend: เพิ่ม validation (file size, type, dimensions)
+- [x] Frontend: ImageUploader Component (drag & drop)
+- [x] Frontend: Image Preview & Crop
+- [x] Frontend: Multiple Images Upload (max 10)
+- [x] Frontend: Progress Bar
+- [x] Integration: Profile Page - อัพโหลดรูปโปรไฟล์
+- [x] Integration: Seller Dashboard - อัพโหลดรูปสินค้า

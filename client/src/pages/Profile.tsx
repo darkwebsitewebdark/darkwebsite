@@ -6,21 +6,20 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { trpc } from "@/lib/trpc";
-import { User, Wallet, CreditCard, Package, FileText } from "lucide-react";
-import { Link, useLocation } from "wouter";
+import { Wallet, CreditCard, History, User, Settings, Package, FileText } from "lucide-react";
 import { toast } from "sonner";
+import { ImageUploader } from "@/components/ImageUploader";
 import { getLoginUrl } from "@/const";
+import { useLocation, Link } from "wouter";
 
 export default function Profile() {
   const { user, isAuthenticated } = useAuth();
   const [, setLocation] = useLocation();
   const utils = trpc.useUtils();
-
+  
   const [profileForm, setProfileForm] = useState({
     name: user?.name || "",
-    email: user?.email || "",
-    phone: "",
-    address: "",
+    profileImage: user?.profileImage || "",
   });
 
   const [bankForm, setBankForm] = useState({
@@ -72,6 +71,7 @@ export default function Profile() {
     try {
       await updateProfileMutation.mutateAsync({
         name: profileForm.name,
+        profileImage: profileForm.profileImage,
       });
     } catch (error) {
       toast.error("เกิดข้อผิดพลาด");
@@ -140,22 +140,24 @@ export default function Profile() {
                 <h3 className="text-xl font-bold mb-6">แก้ไขข้อมูลส่วนตัว</h3>
                 <form onSubmit={handleUpdateProfile} className="space-y-4">
                   <div>
-                    <Label htmlFor="name">ชื่อ</Label>
-                    <Input
-                      id="name"
-                      value={profileForm.name}
-                      onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })}
+                    <Label>รูปโปรไฟล์</Label>
+                    <ImageUploader
+                      prefix="profiles"
+                      currentImage={profileForm.profileImage}
+                      onUpload={(url) => setProfileForm({ ...profileForm, profileImage: url })}
+                      resize={{ width: 400, height: 400 }}
                     />
                   </div>
                   <div>
-                    <Label htmlFor="email">อีเมล</Label>
+                    <Label>ชื่อ</Label>
                     <Input
-                      id="email"
-                      type="email"
-                      value={profileForm.email}
-                      onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })}
+                      value={profileForm.name}
+                      onChange={(e) =>
+                        setProfileForm({ ...profileForm, name: e.target.value })
+                      }
                     />
                   </div>
+
                   <Button
                     type="submit"
                     className="btn-glow gradient-red-orange"

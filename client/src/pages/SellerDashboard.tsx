@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { trpc } from "@/lib/trpc";
 import { Plus, Edit, Trash2, Package, DollarSign, ShoppingBag, TrendingUp } from "lucide-react";
+import { MultipleImagesUploader } from "@/components/ImageUploader";
 import { Link, useLocation } from "wouter";
 import { toast } from "sonner";
 import { getLoginUrl } from "@/const";
@@ -27,7 +28,7 @@ export default function SellerDashboard() {
     price: "",
     stock: "",
     categoryId: "",
-    images: [] as string[],
+    images: [] as Array<{ url: string; key: string }>,
   });
 
   const { data: products } = trpc.products.list.useQuery(
@@ -97,7 +98,7 @@ export default function SellerDashboard() {
       price: Math.round(parseFloat(productForm.price) * 100),
       stock: parseInt(productForm.stock),
       categoryId: parseInt(productForm.categoryId),
-      images: productForm.images,
+      images: productForm.images.map(img => img.url),
     };
 
     if (editingProduct) {
@@ -249,6 +250,15 @@ export default function SellerDashboard() {
                       </option>
                     ))}
                   </select>
+                </div>
+                <div>
+                  <Label>รูปภาพสินค้า (สูงสุด 10 รูป)</Label>
+                  <MultipleImagesUploader
+                    prefix="products"
+                    maxImages={10}
+                    currentImages={productForm.images}
+                    onUpload={(images) => setProductForm({ ...productForm, images })}
+                  />
                 </div>
                 <div className="flex gap-4">
                   <Button type="submit" className="flex-1 btn-glow" disabled={createProductMutation.isPending || updateProductMutation.isPending}>
