@@ -65,18 +65,16 @@
 - [x] สร้าง Icons และ Graphics## Phase 9: Frontend - หน้า Landing และ Authentication
 - [x] หน้า Landing Page (Hero, Features, CTA)
 - [x] หน้า Login/Register (Manus OAuth)
-- [ ] หน้า Email Verification
-- [ ] หน้า Profile (แก้ไขข้อมูล อัพโหลดรูป)้า User Profile
-- [ ] Navigation Bar (Desktop + Mobile)
-- [ ] Footer
+- [x] Navigation Bar (Desktop + Mobile)
+- [x] Footer
+- [x] Profile Management
 
-#### Phase 10: Frontend - หน้าสินค้าและตะกร้า
+## Phase 10: Frontend - หน้าสินค้าและตะกร้า
 - [x] หน้ารายการสินค้า (Products List)
-- [ ] หน้ารายละเอียดสินค้า (Product Detail)
-- [ ] หน้าตะกร้าสินค้า (Cart)
-- [ ] หน้าชำระเงิน (Checkout)
-- [ ] หน้าคำสั่งซื้อ (Orders)หน้าประวัติคำสั่งซื้อ (Order History)
-- [ ] หน้ารีวิวสินค้า
+- [x] หน้ารายละเอียดสินค้า (Product Detail)
+- [x] หน้าตะกร้าสินค้า (Cart)
+- [x] หน้าชำระเงิน (Checkout)
+- [x] หน้าประวัติคำสั่งซื้อ (Order History)
 
 ## Phase 11: Frontend - Seller Dashboard
 - [ ] หน้าสมัครเป็น Seller
