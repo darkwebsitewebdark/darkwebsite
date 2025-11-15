@@ -13,6 +13,7 @@ import SellerDashboard from "./pages/SellerDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import Profile from "./pages/Profile";
 import Orders from "./pages/Orders";
+import OrderDetail from "./pages/OrderDetail";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import AuthCallback from "./pages/AuthCallback";
@@ -60,6 +61,11 @@ function Router() {
       <Route path={"/orders"}>
         <ProtectedRoute>
           <Orders />
+        </ProtectedRoute>
+      </Route>
+      <Route path={"/orders/:id"}>
+        <ProtectedRoute>
+          <OrderDetail />
         </ProtectedRoute>
       </Route>
       <Route path={"/chat"}>
