@@ -67,24 +67,7 @@ export default function Register() {
       }
 
       if (data.user) {
-        // Create user in database
-        const { error: insertError } = await supabase
-          .from('users')
-          .insert({
-            auth_id: data.user.id,
-            email: data.user.email,
-            name,
-            role: 'user',
-            wallet_balance: 0,
-          });
-
-        if (insertError) {
-          console.error('Error creating user:', insertError);
-          toast.error("เกิดข้อผิดพลาดในการสร้างบัญชี");
-          return;
-        }
-
-        toast.success("สมัครสมาชิกสำเร็จ! กรุณาตรวจสอบอีเมลเพื่อยืนยันบัญชี");
+        toast.success("สมัครสมาชิกสำเร็จ! กรุณาเข้าสู่ระบบ");
         setLocation("/login");
       }
     } catch (error) {
