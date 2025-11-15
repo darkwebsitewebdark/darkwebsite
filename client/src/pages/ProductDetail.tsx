@@ -245,7 +245,7 @@ export default function ProductDetail() {
                       <p className="text-muted-foreground">{review.comment}</p>
                       {review.images && review.images.length > 0 && (
                         <div className="flex gap-2 mt-2">
-                          {review.images.map((img, idx) => (
+                          {review.images.map((img: string, idx: number) => (
                             <img
                               key={idx}
                               src={img}

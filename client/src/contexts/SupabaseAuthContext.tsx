@@ -6,8 +6,10 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
+  isAuthenticated: boolean;
   signOut: () => Promise<void>;
   refreshUser: () => Promise<void>;
+  logout: () => Promise<void>; // alias for signOut
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -65,7 +67,9 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
         user,
         session,
         loading,
+        isAuthenticated: !!session && !!user,
         signOut: handleSignOut,
+        logout: handleSignOut, // alias
         refreshUser,
       }}
     >

@@ -1,234 +1,193 @@
-import { eq, and, desc, asc, like, or, sql, inArray } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/mysql2";
-import { 
-  InsertUser, users, 
-  sellerApplications, InsertSellerApplication,
-  categories, InsertCategory,
-  products, InsertProduct,
-  reviews, InsertReview,
-  orders, InsertOrder,
-  orderItems, InsertOrderItem,
-  transactions, InsertTransaction,
-  cartItems, InsertCartItem,
-  messages, InsertMessage,
-  disputes, InsertDispute,
-  notifications, InsertNotification,
-  wishlist, InsertWishlist,
-  withdrawalRequests, InsertWithdrawalRequest
-} from "../drizzle/schema";
-import { ENV } from './_core/env';
+import { supabase } from './_core/supabase';
 
-let _db: ReturnType<typeof drizzle> | null = null;
+// Simple database helper using Supabase client
+// All queries use Supabase SDK directly for better type safety and RLS support
 
-export async function getDb() {
-  if (!_db && process.env.DATABASE_URL) {
-    try {
-      _db = drizzle(process.env.DATABASE_URL);
-    } catch (error) {
-      console.warn("[Database] Failed to connect:", error);
-      _db = null;
-    }
-  }
-  return _db;
-}
+export { supabase };
 
 // ============= USER FUNCTIONS =============
 
-export async function upsertUser(user: InsertUser): Promise<void> {
-  if (!user.openId) {
-    throw new Error("User openId is required for upsert");
+export async function getUserById(id: number) {
+  const { data, error } = await supabase
+    .from('users')
+    .select('*')
+    .eq('id', id)
+    .single();
+  
+  if (error) {
+    console.error('[DB] Error getting user:', error);
+    return null;
   }
+  
+  return data;
+}
 
-  const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot upsert user: database not available");
-    return;
+export async function getUserByAuthId(authId: string) {
+  const { data, error } = await supabase
+    .from('users')
+    .select('*')
+    .eq('auth_id', authId)
+    .single();
+  
+  if (error) {
+    console.error('[DB] Error getting user by auth_id:', error);
+    return null;
   }
+  
+  return data;
+}
 
-  try {
-    const values: InsertUser = {
-      openId: user.openId,
-    };
-    const updateSet: Record<string, unknown> = {};
-
-    const textFields = ["name", "email", "loginMethod"] as const;
-    type TextField = (typeof textFields)[number];
-
-    const assignNullable = (field: TextField) => {
-      const value = user[field];
-      if (value === undefined) return;
-      const normalized = value ?? null;
-      values[field] = normalized;
-      updateSet[field] = normalized;
-    };
-
-    textFields.forEach(assignNullable);
-
-    if (user.lastSignedIn !== undefined) {
-      values.lastSignedIn = user.lastSignedIn;
-      updateSet.lastSignedIn = user.lastSignedIn;
-    }
-    if (user.role !== undefined) {
-      values.role = user.role;
-      updateSet.role = user.role;
-    } else if (user.openId === ENV.ownerOpenId) {
-      values.role = 'admin';
-      updateSet.role = 'admin';
-    }
-
-    if (!values.lastSignedIn) {
-      values.lastSignedIn = new Date();
-    }
-
-    if (Object.keys(updateSet).length === 0) {
-      updateSet.lastSignedIn = new Date();
-    }
-
-    await db.insert(users).values(values).onDuplicateKeyUpdate({
-      set: updateSet,
-    });
-  } catch (error) {
-    console.error("[Database] Failed to upsert user:", error);
+export async function updateUserProfile(userId: number, updates: any) {
+  const { data, error } = await supabase
+    .from('users')
+    .update(updates)
+    .eq('id', userId)
+    .select()
+    .single();
+  
+  if (error) {
+    console.error('[DB] Error updating user:', error);
     throw error;
   }
-}
-
-export async function getUserByOpenId(openId: string) {
-  const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot get user: database not available");
-    return undefined;
-  }
-
-  const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
-  return result.length > 0 ? result[0] : undefined;
-}
-
-export async function getUserById(id: number) {
-  const db = await getDb();
-  if (!db) return undefined;
   
-  const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
-  return result.length > 0 ? result[0] : undefined;
-}
-
-export async function updateUserProfile(userId: number, data: Partial<InsertUser>) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
-  
-  await db.update(users).set(data).where(eq(users.id, userId));
-  return getUserById(userId);
+  return data;
 }
 
 export async function updateUserWallet(userId: number, amount: number) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
+  // Get current balance
+  const user = await getUserById(userId);
+  if (!user) throw new Error('User not found');
   
-  await db.update(users)
-    .set({ walletBalance: sql`${users.walletBalance} + ${amount}` })
-    .where(eq(users.id, userId));
+  const newBalance = (user.wallet_balance || 0) + amount;
   
-  return getUserById(userId);
+  return updateUserProfile(userId, { wallet_balance: newBalance });
 }
 
 // ============= SELLER APPLICATION FUNCTIONS =============
 
-export async function createSellerApplication(data: InsertSellerApplication) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
+export async function createSellerApplication(data: any) {
+  const { data: application, error } = await supabase
+    .from('seller_applications')
+    .insert(data)
+    .select()
+    .single();
   
-  await db.insert(sellerApplications).values(data);
+  if (error) {
+    console.error('[DB] Error creating seller application:', error);
+    throw error;
+  }
   
-  const result = await db.select()
-    .from(sellerApplications)
-    .where(eq(sellerApplications.userId, data.userId))
-    .orderBy(desc(sellerApplications.createdAt))
-    .limit(1);
-  
-  return result[0];
+  return application;
 }
 
 export async function getSellerApplication(userId: number) {
-  const db = await getDb();
-  if (!db) return undefined;
+  const { data, error } = await supabase
+    .from('seller_applications')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single();
   
-  const result = await db.select()
-    .from(sellerApplications)
-    .where(eq(sellerApplications.userId, userId))
-    .orderBy(desc(sellerApplications.createdAt))
-    .limit(1);
+  if (error && error.code !== 'PGRST116') { // PGRST116 = no rows
+    console.error('[DB] Error getting seller application:', error);
+  }
   
-  return result[0];
+  return data;
 }
 
 export async function getPendingSellerApplications() {
-  const db = await getDb();
-  if (!db) return [];
+  const { data, error } = await supabase
+    .from('seller_applications')
+    .select('*, users(*)')
+    .eq('status', 'pending')
+    .order('created_at', { ascending: false });
   
-  return db.select()
-    .from(sellerApplications)
-    .where(eq(sellerApplications.status, "pending"))
-    .orderBy(desc(sellerApplications.createdAt));
+  if (error) {
+    console.error('[DB] Error getting pending applications:', error);
+    return [];
+  }
+  
+  return data;
 }
 
-export async function updateSellerApplication(id: number, data: Partial<InsertSellerApplication>) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
+export async function updateSellerApplication(id: number, updates: any) {
+  const { data, error } = await supabase
+    .from('seller_applications')
+    .update(updates)
+    .eq('id', id)
+    .select()
+    .single();
   
-  await db.update(sellerApplications).set(data).where(eq(sellerApplications.id, id));
+  if (error) {
+    console.error('[DB] Error updating seller application:', error);
+    throw error;
+  }
   
-  const result = await db.select()
-    .from(sellerApplications)
-    .where(eq(sellerApplications.id, id))
-    .limit(1);
-  
-  return result[0];
+  return data;
 }
 
 // ============= CATEGORY FUNCTIONS =============
 
 export async function getCategories() {
-  const db = await getDb();
-  if (!db) return [];
+  const { data, error } = await supabase
+    .from('categories')
+    .select('*')
+    .eq('is_active', true)
+    .order('display_order', { ascending: true });
   
-  return db.select()
-    .from(categories)
-    .where(eq(categories.isActive, true))
-    .orderBy(asc(categories.displayOrder));
+  if (error) {
+    console.error('[DB] Error getting categories:', error);
+    return [];
+  }
+  
+  return data;
 }
 
 export async function getCategoryById(id: number) {
-  const db = await getDb();
-  if (!db) return undefined;
+  const { data, error } = await supabase
+    .from('categories')
+    .select('*')
+    .eq('id', id)
+    .single();
   
-  const result = await db.select()
-    .from(categories)
-    .where(eq(categories.id, id))
-    .limit(1);
+  if (error) {
+    console.error('[DB] Error getting category:', error);
+    return null;
+  }
   
-  return result[0];
+  return data;
 }
 
-export async function createCategory(data: InsertCategory) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
+export async function createCategory(category: any) {
+  const { data, error } = await supabase
+    .from('categories')
+    .insert(category)
+    .select()
+    .single();
   
-  await db.insert(categories).values(data);
+  if (error) {
+    console.error('[DB] Error creating category:', error);
+    throw error;
+  }
   
-  const result = await db.select()
-    .from(categories)
-    .where(eq(categories.slug, data.slug))
-    .limit(1);
-  
-  return result[0];
+  return data;
 }
 
-export async function updateCategory(id: number, data: Partial<InsertCategory>) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
+export async function updateCategory(id: number, updates: any) {
+  const { data, error } = await supabase
+    .from('categories')
+    .update(updates)
+    .eq('id', id)
+    .select()
+    .single();
   
-  await db.update(categories).set(data).where(eq(categories.id, id));
-  return getCategoryById(id);
+  if (error) {
+    console.error('[DB] Error updating category:', error);
+    throw error;
+  }
+  
+  return data;
 }
 
 // ============= PRODUCT FUNCTIONS =============
@@ -241,606 +200,839 @@ export async function getProducts(filters?: {
   limit?: number;
   offset?: number;
 }) {
-  const db = await getDb();
-  if (!db) return [];
+  let query = supabase
+    .from('products')
+    .select('*, categories(*), users!products_seller_id_fkey(id, name, profile_image)');
   
-  let query = db.select().from(products);
-  
-  const conditions = [];
   if (filters?.categoryId) {
-    conditions.push(eq(products.categoryId, filters.categoryId));
+    query = query.eq('category_id', filters.categoryId);
   }
   if (filters?.sellerId) {
-    conditions.push(eq(products.sellerId, filters.sellerId));
+    query = query.eq('seller_id', filters.sellerId);
   }
   if (filters?.search) {
-    conditions.push(
-      or(
-        like(products.name, `%${filters.search}%`),
-        like(products.description, `%${filters.search}%`)
-      )
-    );
+    query = query.or(`name.ilike.%${filters.search}%,description.ilike.%${filters.search}%`);
   }
   if (filters?.status) {
-    conditions.push(eq(products.status, filters.status as any));
+    query = query.eq('status', filters.status);
   }
   
-  if (conditions.length > 0) {
-    query = query.where(and(...conditions)) as any;
-  }
-  
-  query = query.orderBy(desc(products.createdAt)) as any;
+  query = query.order('created_at', { ascending: false });
   
   if (filters?.limit) {
-    query = query.limit(filters.limit) as any;
+    query = query.limit(filters.limit);
   }
   if (filters?.offset) {
-    query = query.offset(filters.offset) as any;
+    query = query.range(filters.offset, filters.offset + (filters.limit || 10) - 1);
   }
   
-  return query;
+  const { data, error } = await query;
+  
+  if (error) {
+    console.error('[DB] Error getting products:', error);
+    return [];
+  }
+  
+  return data;
 }
 
 export async function getProductById(id: number) {
-  const db = await getDb();
-  if (!db) return undefined;
+  const { data, error } = await supabase
+    .from('products')
+    .select('*, categories(*), users!products_seller_id_fkey(id, name, profile_image)')
+    .eq('id', id)
+    .single();
   
-  const result = await db.select()
-    .from(products)
-    .where(eq(products.id, id))
-    .limit(1);
+  if (error) {
+    console.error('[DB] Error getting product:', error);
+    return null;
+  }
   
-  return result[0];
+  return data;
 }
 
-export async function createProduct(data: InsertProduct) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
+export async function createProduct(product: any) {
+  const { data, error } = await supabase
+    .from('products')
+    .insert(product)
+    .select()
+    .single();
   
-  const result = await db.insert(products).values(data);
-  const insertId = Number(result[0].insertId);
+  if (error) {
+    console.error('[DB] Error creating product:', error);
+    throw error;
+  }
   
-  return getProductById(insertId);
+  return data;
 }
 
-export async function updateProduct(id: number, data: Partial<InsertProduct>) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
+export async function updateProduct(id: number, updates: any) {
+  const { data, error } = await supabase
+    .from('products')
+    .update(updates)
+    .eq('id', id)
+    .select()
+    .single();
   
-  await db.update(products).set(data).where(eq(products.id, id));
-  return getProductById(id);
+  if (error) {
+    console.error('[DB] Error updating product:', error);
+    throw error;
+  }
+  
+  return data;
 }
 
 export async function deleteProduct(id: number) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
+  const { error } = await supabase
+    .from('products')
+    .delete()
+    .eq('id', id);
   
-  await db.delete(products).where(eq(products.id, id));
+  if (error) {
+    console.error('[DB] Error deleting product:', error);
+    throw error;
+  }
 }
 
 // ============= CART FUNCTIONS =============
 
 export async function getCartItems(userId: number) {
-  const db = await getDb();
-  if (!db) return [];
+  const { data, error } = await supabase
+    .from('cart_items')
+    .select('*, products(*, users!products_seller_id_fkey(id, name))')
+    .eq('user_id', userId);
   
-  return db.select({
-    id: cartItems.id,
-    userId: cartItems.userId,
-    productId: cartItems.productId,
-    quantity: cartItems.quantity,
-    product: products
-  })
-    .from(cartItems)
-    .leftJoin(products, eq(cartItems.productId, products.id))
-    .where(eq(cartItems.userId, userId));
+  if (error) {
+    console.error('[DB] Error getting cart items:', error);
+    return [];
+  }
+  
+  return data;
 }
 
-export async function addToCart(data: InsertCartItem) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
-  
+export async function addToCart(userId: number, productId: number, quantity = 1) {
   // Check if item already exists
-  const existing = await db.select()
-    .from(cartItems)
-    .where(
-      and(
-        eq(cartItems.userId, data.userId),
-        eq(cartItems.productId, data.productId)
-      )
-    )
-    .limit(1);
+  const { data: existing } = await supabase
+    .from('cart_items')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('product_id', productId)
+    .single();
   
-  if (existing.length > 0) {
+  if (existing) {
     // Update quantity
-    await db.update(cartItems)
-      .set({ quantity: sql`${cartItems.quantity} + ${data.quantity || 1}` })
-      .where(eq(cartItems.id, existing[0].id));
+    const { data, error } = await supabase
+      .from('cart_items')
+      .update({ quantity: existing.quantity + quantity })
+      .eq('id', existing.id)
+      .select()
+      .single();
     
-    return existing[0];
+    if (error) throw error;
+    return data;
   } else {
     // Insert new
-    await db.insert(cartItems).values(data);
+    const { data, error } = await supabase
+      .from('cart_items')
+      .insert({ user_id: userId, product_id: productId, quantity })
+      .select()
+      .single();
     
-    const result = await db.select()
-      .from(cartItems)
-      .where(
-        and(
-          eq(cartItems.userId, data.userId),
-          eq(cartItems.productId, data.productId)
-        )
-      )
-      .limit(1);
-    
-    return result[0];
+    if (error) throw error;
+    return data;
   }
 }
 
 export async function updateCartItem(id: number, quantity: number) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
+  const { data, error } = await supabase
+    .from('cart_items')
+    .update({ quantity })
+    .eq('id', id)
+    .select()
+    .single();
   
-  await db.update(cartItems).set({ quantity }).where(eq(cartItems.id, id));
+  if (error) throw error;
+  return data;
 }
 
 export async function removeFromCart(id: number) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
+  const { error } = await supabase
+    .from('cart_items')
+    .delete()
+    .eq('id', id);
   
-  await db.delete(cartItems).where(eq(cartItems.id, id));
+  if (error) throw error;
 }
 
 export async function clearCart(userId: number) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
+  const { error } = await supabase
+    .from('cart_items')
+    .delete()
+    .eq('user_id', userId);
   
-  await db.delete(cartItems).where(eq(cartItems.userId, userId));
+  if (error) throw error;
+}
+
+// ============= ORDER FUNCTIONS =============
+
+export async function createOrder(order: any) {
+  const { data, error } = await supabase
+    .from('orders')
+    .insert(order)
+    .select()
+    .single();
+  
+  if (error) {
+    console.error('[DB] Error creating order:', error);
+    throw error;
+  }
+  
+  return data;
+}
+
+export async function createOrderItems(items: any[]) {
+  const { data, error } = await supabase
+    .from('order_items')
+    .insert(items)
+    .select();
+  
+  if (error) {
+    console.error('[DB] Error creating order items:', error);
+    throw error;
+  }
+  
+  return data;
+}
+
+export async function getOrders(filters?: {
+  buyerId?: number;
+  sellerId?: number;
+  status?: string;
+  limit?: number;
+}) {
+  let query = supabase
+    .from('orders')
+    .select('*, order_items(*, products(*))');
+  
+  if (filters?.buyerId) {
+    query = query.eq('buyer_id', filters.buyerId);
+  }
+  if (filters?.sellerId) {
+    query = query.eq('seller_id', filters.sellerId);
+  }
+  if (filters?.status) {
+    query = query.eq('status', filters.status);
+  }
+  
+  query = query.order('created_at', { ascending: false });
+  
+  if (filters?.limit) {
+    query = query.limit(filters.limit);
+  }
+  
+  const { data, error } = await query;
+  
+  if (error) {
+    console.error('[DB] Error getting orders:', error);
+    return [];
+  }
+  
+  return data;
+}
+
+export async function getOrderById(id: number) {
+  const { data, error } = await supabase
+    .from('orders')
+    .select('*, order_items(*, products(*)), users!orders_buyer_id_fkey(*), seller:users!orders_seller_id_fkey(*)')
+    .eq('id', id)
+    .single();
+  
+  if (error) {
+    console.error('[DB] Error getting order:', error);
+    return null;
+  }
+  
+  return data;
+}
+
+export async function updateOrder(id: number, updates: any) {
+  const { data, error } = await supabase
+    .from('orders')
+    .update(updates)
+    .eq('id', id)
+    .select()
+    .single();
+  
+  if (error) {
+    console.error('[DB] Error updating order:', error);
+    throw error;
+  }
+  
+  return data;
 }
 
 // ============= TRANSACTION FUNCTIONS =============
 
-export async function createTransaction(data: InsertTransaction) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
+export async function createTransaction(transaction: any) {
+  const { data, error } = await supabase
+    .from('transactions')
+    .insert(transaction)
+    .select()
+    .single();
   
-  const result = await db.insert(transactions).values(data);
-  const insertId = Number(result[0].insertId);
+  if (error) {
+    console.error('[DB] Error creating transaction:', error);
+    throw error;
+  }
   
-  const transaction = await db.select()
-    .from(transactions)
-    .where(eq(transactions.id, insertId))
-    .limit(1);
-  
-  return transaction[0];
+  return data;
 }
 
 export async function getTransactions(userId: number, limit = 50) {
-  const db = await getDb();
-  if (!db) return [];
-  
-  return db.select()
-    .from(transactions)
-    .where(eq(transactions.userId, userId))
-    .orderBy(desc(transactions.createdAt))
+  const { data, error } = await supabase
+    .from('transactions')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
     .limit(limit);
-}
-
-export async function getTransactionByRef(refNumber: string) {
-  const db = await getDb();
-  if (!db) return undefined;
   
-  const result = await db.select()
-    .from(transactions)
-    .where(eq(transactions.refNumber, refNumber))
-    .limit(1);
+  if (error) {
+    console.error('[DB] Error getting transactions:', error);
+    return [];
+  }
   
-  return result[0];
+  return data;
 }
 
 // ============= NOTIFICATION FUNCTIONS =============
 
-export async function createNotification(data: InsertNotification) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
+export async function createNotification(notification: any) {
+  const { error } = await supabase
+    .from('notifications')
+    .insert(notification);
   
-  await db.insert(notifications).values(data);
+  if (error) {
+    console.error('[DB] Error creating notification:', error);
+    throw error;
+  }
 }
 
 export async function getNotifications(userId: number, limit = 50) {
-  const db = await getDb();
-  if (!db) return [];
-  
-  return db.select()
-    .from(notifications)
-    .where(eq(notifications.userId, userId))
-    .orderBy(desc(notifications.createdAt))
+  const { data, error } = await supabase
+    .from('notifications')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
     .limit(limit);
+  
+  if (error) {
+    console.error('[DB] Error getting notifications:', error);
+    return [];
+  }
+  
+  return data;
 }
 
 export async function markNotificationAsRead(id: number) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
+  const { error } = await supabase
+    .from('notifications')
+    .update({ is_read: true })
+    .eq('id', id);
   
-  await db.update(notifications)
-    .set({ isRead: true })
-    .where(eq(notifications.id, id));
+  if (error) {
+    console.error('[DB] Error marking notification as read:', error);
+    throw error;
+  }
 }
 
 export async function markAllNotificationsAsRead(userId: number) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
+  const { error } = await supabase
+    .from('notifications')
+    .update({ is_read: true })
+    .eq('user_id', userId);
   
-  await db.update(notifications)
-    .set({ isRead: true })
-    .where(eq(notifications.userId, userId));
+  if (error) {
+    console.error('[DB] Error marking all notifications as read:', error);
+    throw error;
+  }
+}
+
+// ============= REVIEW FUNCTIONS =============
+
+export async function createReview(review: any) {
+  const { data, error } = await supabase
+    .from('reviews')
+    .insert(review)
+    .select()
+    .single();
+  
+  if (error) {
+    console.error('[DB] Error creating review:', error);
+    throw error;
+  }
+  
+  return data;
+}
+
+export async function getProductReviews(productId: number) {
+  const { data, error } = await supabase
+    .from('reviews')
+    .select('*, users(id, name, profile_image)')
+    .eq('product_id', productId)
+    .order('created_at', { ascending: false });
+  
+  if (error) {
+    console.error('[DB] Error getting reviews:', error);
+    return [];
+  }
+  
+  return data;
 }
 
 // ============= WISHLIST FUNCTIONS =============
 
 export async function getWishlist(userId: number) {
-  const db = await getDb();
-  if (!db) return [];
+  const { data, error } = await supabase
+    .from('wishlist')
+    .select('*, products(*, users!products_seller_id_fkey(id, name))')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
   
-  return db.select({
-    id: wishlist.id,
-    userId: wishlist.userId,
-    productId: wishlist.productId,
-    createdAt: wishlist.createdAt,
-    product: products
-  })
-    .from(wishlist)
-    .leftJoin(products, eq(wishlist.productId, products.id))
-    .where(eq(wishlist.userId, userId))
-    .orderBy(desc(wishlist.createdAt));
+  if (error) {
+    console.error('[DB] Error getting wishlist:', error);
+    return [];
+  }
+  
+  return data;
 }
 
 export async function addToWishlist(userId: number, productId: number) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
+  const { data, error } = await supabase
+    .from('wishlist')
+    .insert({ user_id: userId, product_id: productId })
+    .select()
+    .single();
   
-  // Check if already exists
-  const existing = await db.select()
-    .from(wishlist)
-    .where(
-      and(
-        eq(wishlist.userId, userId),
-        eq(wishlist.productId, productId)
-      )
-    )
-    .limit(1);
-  
-  if (existing.length > 0) {
-    return existing[0];
+  if (error) {
+    console.error('[DB] Error adding to wishlist:', error);
+    throw error;
   }
   
-  await db.insert(wishlist).values({ userId, productId });
-  
-  const result = await db.select()
-    .from(wishlist)
-    .where(
-      and(
-        eq(wishlist.userId, userId),
-        eq(wishlist.productId, productId)
-      )
-    )
-    .limit(1);
-  
-  return result[0];
+  return data;
 }
 
 export async function removeFromWishlist(userId: number, productId: number) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
+  const { error } = await supabase
+    .from('wishlist')
+    .delete()
+    .eq('user_id', userId)
+    .eq('product_id', productId);
   
-  await db.delete(wishlist)
-    .where(
-      and(
-        eq(wishlist.userId, userId),
-        eq(wishlist.productId, productId)
-      )
-    );
-}
-
-// ============= ORDER FUNCTIONS =============
-
-export async function createOrder(data: InsertOrder) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
-  
-  const result = await db.insert(orders).values(data);
-  const insertId = Number(result[0].insertId);
-  
-  return getOrderById(insertId);
-}
-
-export async function getOrderById(id: number) {
-  const db = await getDb();
-  if (!db) return undefined;
-  
-  const result = await db.select()
-    .from(orders)
-    .where(eq(orders.id, id))
-    .limit(1);
-  
-  return result[0];
-}
-
-export async function getOrderByNumber(orderNumber: string) {
-  const db = await getDb();
-  if (!db) return undefined;
-  
-  const result = await db.select()
-    .from(orders)
-    .where(eq(orders.orderNumber, orderNumber))
-    .limit(1);
-  
-  return result[0];
-}
-
-export async function getUserOrders(userId: number, role: 'buyer' | 'seller' = 'buyer') {
-  const db = await getDb();
-  if (!db) return [];
-  
-  const condition = role === 'buyer' 
-    ? eq(orders.buyerId, userId)
-    : eq(orders.sellerId, userId);
-  
-  return db.select()
-    .from(orders)
-    .where(condition)
-    .orderBy(desc(orders.createdAt));
-}
-
-export async function updateOrder(id: number, data: Partial<InsertOrder>) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
-  
-  await db.update(orders).set(data).where(eq(orders.id, id));
-  return getOrderById(id);
-}
-
-export async function createOrderItem(data: InsertOrderItem) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
-  
-  await db.insert(orderItems).values(data);
-}
-
-export async function getOrderItems(orderId: number) {
-  const db = await getDb();
-  if (!db) return [];
-  
-  return db.select()
-    .from(orderItems)
-    .where(eq(orderItems.orderId, orderId));
-}
-
-// ============= REVIEW FUNCTIONS =============
-
-export async function createReview(data: InsertReview) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
-  
-  const result = await db.insert(reviews).values(data);
-  const insertId = Number(result[0].insertId);
-  
-  const review = await db.select()
-    .from(reviews)
-    .where(eq(reviews.id, insertId))
-    .limit(1);
-  
-  return review[0];
-}
-
-export async function getProductReviews(productId: number) {
-  const db = await getDb();
-  if (!db) return [];
-  
-  return db.select()
-    .from(reviews)
-    .where(eq(reviews.productId, productId))
-    .orderBy(desc(reviews.createdAt));
-}
-
-export async function getUserReview(userId: number, orderId: number) {
-  const db = await getDb();
-  if (!db) return undefined;
-  
-  const result = await db.select()
-    .from(reviews)
-    .where(
-      and(
-        eq(reviews.userId, userId),
-        eq(reviews.orderId, orderId)
-      )
-    )
-    .limit(1);
-  
-  return result[0];
-}
-
-// ============= WITHDRAWAL FUNCTIONS =============
-
-export async function createWithdrawalRequest(data: InsertWithdrawalRequest) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
-  
-  const result = await db.insert(withdrawalRequests).values(data);
-  const insertId = Number(result[0].insertId);
-  
-  const withdrawal = await db.select()
-    .from(withdrawalRequests)
-    .where(eq(withdrawalRequests.id, insertId))
-    .limit(1);
-  
-  return withdrawal[0];
-}
-
-export async function getUserWithdrawals(userId: number) {
-  const db = await getDb();
-  if (!db) return [];
-  
-  return db.select()
-    .from(withdrawalRequests)
-    .where(eq(withdrawalRequests.userId, userId))
-    .orderBy(desc(withdrawalRequests.createdAt));
-}
-
-export async function getPendingWithdrawals() {
-  const db = await getDb();
-  if (!db) return [];
-  
-  return db.select()
-    .from(withdrawalRequests)
-    .where(eq(withdrawalRequests.status, 'pending'))
-    .orderBy(desc(withdrawalRequests.createdAt));
-}
-
-export async function updateWithdrawalRequest(id: number, data: Partial<InsertWithdrawalRequest>) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
-  
-  await db.update(withdrawalRequests).set(data).where(eq(withdrawalRequests.id, id));
-  
-  const result = await db.select()
-    .from(withdrawalRequests)
-    .where(eq(withdrawalRequests.id, id))
-    .limit(1);
-  
-  return result[0];
+  if (error) {
+    console.error('[DB] Error removing from wishlist:', error);
+    throw error;
+  }
 }
 
 // ============= MESSAGE FUNCTIONS =============
 
-export async function createMessage(data: InsertMessage) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
+export async function createMessage(message: any) {
+  const { data, error } = await supabase
+    .from('messages')
+    .insert(message)
+    .select()
+    .single();
   
-  await db.insert(messages).values(data);
-}
-
-export async function getConversation(userId1: number, userId2: number, orderId?: number) {
-  const db = await getDb();
-  if (!db) return [];
-  
-  const conditions = [
-    or(
-      and(
-        eq(messages.senderId, userId1),
-        eq(messages.receiverId, userId2)
-      ),
-      and(
-        eq(messages.senderId, userId2),
-        eq(messages.receiverId, userId1)
-      )
-    )
-  ];
-  
-  if (orderId) {
-    conditions.push(eq(messages.orderId, orderId));
+  if (error) {
+    console.error('[DB] Error creating message:', error);
+    throw error;
   }
   
-  return db.select()
-    .from(messages)
-    .where(and(...conditions))
-    .orderBy(asc(messages.createdAt));
+  return data;
 }
 
-export async function getSupportMessages(userId: number) {
-  const db = await getDb();
-  if (!db) return [];
+export async function getConversation(userId1: number, userId2: number) {
+  const { data, error } = await supabase
+    .from('messages')
+    .select('*, sender:users!messages_sender_id_fkey(id, name, profile_image), receiver:users!messages_receiver_id_fkey(id, name, profile_image)')
+    .or(`and(sender_id.eq.${userId1},receiver_id.eq.${userId2}),and(sender_id.eq.${userId2},receiver_id.eq.${userId1})`)
+    .order('created_at', { ascending: true });
   
-  return db.select()
-    .from(messages)
-    .where(
-      and(
-        eq(messages.isSupport, true),
-        or(
-          eq(messages.senderId, userId),
-          eq(messages.receiverId, userId)
-        )
-      )
-    )
-    .orderBy(asc(messages.createdAt));
+  if (error) {
+    console.error('[DB] Error getting conversation:', error);
+    return [];
+  }
+  
+  return data;
 }
 
-export async function getAllSupportMessages() {
-  const db = await getDb();
-  if (!db) return [];
+// ============= WITHDRAWAL FUNCTIONS =============
+
+export async function createWithdrawalRequest(request: any) {
+  const { data, error } = await supabase
+    .from('withdrawal_requests')
+    .insert(request)
+    .select()
+    .single();
   
-  return db.select()
-    .from(messages)
-    .where(eq(messages.isSupport, true))
-    .orderBy(desc(messages.createdAt));
+  if (error) {
+    console.error('[DB] Error creating withdrawal request:', error);
+    throw error;
+  }
+  
+  return data;
 }
 
-export async function markMessagesAsRead(userId: number, senderId: number) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
+export async function getWithdrawalRequests(filters?: {
+  userId?: number;
+  status?: string;
+}) {
+  let query = supabase
+    .from('withdrawal_requests')
+    .select('*, users(id, name, email)');
   
-  await db.update(messages)
-    .set({ isRead: true })
-    .where(
-      and(
-        eq(messages.receiverId, userId),
-        eq(messages.senderId, senderId)
-      )
-    );
+  if (filters?.userId) {
+    query = query.eq('user_id', filters.userId);
+  }
+  if (filters?.status) {
+    query = query.eq('status', filters.status);
+  }
+  
+  query = query.order('created_at', { ascending: false });
+  
+  const { data, error } = await query;
+  
+  if (error) {
+    console.error('[DB] Error getting withdrawal requests:', error);
+    return [];
+  }
+  
+  return data;
+}
+
+export async function updateWithdrawalRequest(id: number, updates: any) {
+  const { data, error } = await supabase
+    .from('withdrawal_requests')
+    .update(updates)
+    .eq('id', id)
+    .select()
+    .single();
+  
+  if (error) {
+    console.error('[DB] Error updating withdrawal request:', error);
+    throw error;
+  }
+  
+  return data;
 }
 
 // ============= DISPUTE FUNCTIONS =============
 
-export async function createDispute(data: InsertDispute) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
+export async function createDispute(dispute: any) {
+  const { data, error } = await supabase
+    .from('disputes')
+    .insert(dispute)
+    .select()
+    .single();
   
-  const result = await db.insert(disputes).values(data);
-  const insertId = Number(result[0].insertId);
+  if (error) {
+    console.error('[DB] Error creating dispute:', error);
+    throw error;
+  }
   
-  const dispute = await db.select()
-    .from(disputes)
-    .where(eq(disputes.id, insertId))
-    .limit(1);
+  return data;
+}
+
+export async function getDisputes(filters?: {
+  userId?: number;
+  status?: string;
+}) {
+  let query = supabase
+    .from('disputes')
+    .select('*, orders(order_number), users(id, name, email)');
   
-  return dispute[0];
+  if (filters?.userId) {
+    query = query.eq('user_id', filters.userId);
+  }
+  if (filters?.status) {
+    query = query.eq('status', filters.status);
+  }
+  
+  query = query.order('created_at', { ascending: false});
+  
+  const { data, error } = await query;
+  
+  if (error) {
+    console.error('[DB] Error getting disputes:', error);
+    return [];
+  }
+  
+  return data;
+}
+
+export async function updateDispute(id: number, updates: any) {
+  const { data, error } = await supabase
+    .from('disputes')
+    .update(updates)
+    .eq('id', id)
+    .select()
+    .single();
+  
+  if (error) {
+    console.error('[DB] Error updating dispute:', error);
+    throw error;
+  }
+  
+  return data;
+}
+
+// ============= ADDITIONAL HELPER FUNCTIONS =============
+
+export async function getSupportMessages(limit = 50) {
+  const { data, error } = await supabase
+    .from('messages')
+    .select('*, sender:users!messages_sender_id_fkey(id, name, profile_image), receiver:users!messages_receiver_id_fkey(id, name, profile_image)')
+    .eq('is_support', true)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  
+  if (error) {
+    console.error('[DB] Error getting support messages:', error);
+    return [];
+  }
+  
+  return data;
+}
+
+export async function markMessagesAsRead(userId: number, otherUserId: number) {
+  const { error } = await supabase
+    .from('messages')
+    .update({ is_read: true })
+    .eq('receiver_id', userId)
+    .eq('sender_id', otherUserId);
+  
+  if (error) {
+    console.error('[DB] Error marking messages as read:', error);
+    throw error;
+  }
 }
 
 export async function getOrderDispute(orderId: number) {
-  const db = await getDb();
-  if (!db) return undefined;
+  const { data, error } = await supabase
+    .from('disputes')
+    .select('*, orders(order_number), users(id, name, email)')
+    .eq('order_id', orderId)
+    .single();
   
-  const result = await db.select()
-    .from(disputes)
-    .where(eq(disputes.orderId, orderId))
-    .orderBy(desc(disputes.createdAt))
-    .limit(1);
-  
-  return result[0];
-}
-
-export async function getAllDisputes(status?: string) {
-  const db = await getDb();
-  if (!db) return [];
-  
-  let query = db.select().from(disputes);
-  
-  if (status) {
-    query = query.where(eq(disputes.status, status as any)) as any;
+  if (error && error.code !== 'PGRST116') {
+    console.error('[DB] Error getting order dispute:', error);
   }
   
-  return query.orderBy(desc(disputes.createdAt));
+  return data;
 }
 
-export async function updateDispute(id: number, data: Partial<InsertDispute>) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
+export async function getAllDisputes() {
+  return getDisputes();
+}
+
+export async function getAllUsers(filters?: { role?: string; limit?: number }) {
+  let query = supabase
+    .from('users')
+    .select('*')
+    .order('created_at', { ascending: false });
   
-  await db.update(disputes).set(data).where(eq(disputes.id, id));
+  if (filters?.role) {
+    query = query.eq('role', filters.role);
+  }
+  if (filters?.limit) {
+    query = query.limit(filters.limit);
+  }
   
-  const result = await db.select()
-    .from(disputes)
-    .where(eq(disputes.id, id))
-    .limit(1);
+  const { data, error } = await query;
   
-  return result[0];
+  if (error) {
+    console.error('[DB] Error getting users:', error);
+    return [];
+  }
+  
+  return data;
+}
+
+export async function updateUserRole(userId: number, role: string) {
+  return updateUserProfile(userId, { role });
+}
+
+export async function getAllCategories() {
+  const { data, error } = await supabase
+    .from('categories')
+    .select('*')
+    .order('display_order', { ascending: true });
+  
+  if (error) {
+    console.error('[DB] Error getting all categories:', error);
+    return [];
+  }
+  
+  return data;
+}
+
+export async function deleteCategory(id: number) {
+  const { error } = await supabase
+    .from('categories')
+    .delete()
+    .eq('id', id);
+  
+  if (error) {
+    console.error('[DB] Error deleting category:', error);
+    throw error;
+  }
+}
+
+export async function getAllOrders(filters?: { status?: string; limit?: number }) {
+  let query = supabase
+    .from('orders')
+    .select('*, order_items(*, products(*)), buyer:users!orders_buyer_id_fkey(id, name), seller:users!orders_seller_id_fkey(id, name)')
+    .order('created_at', { ascending: false });
+  
+  if (filters?.status) {
+    query = query.eq('status', filters.status);
+  }
+  if (filters?.limit) {
+    query = query.limit(filters.limit);
+  }
+  
+  const { data, error } = await query;
+  
+  if (error) {
+    console.error('[DB] Error getting all orders:', error);
+    return [];
+  }
+  
+  return data;
+}
+
+export async function getPlatformStats() {
+  // Get counts from different tables
+  const [usersCount, productsCount, ordersCount, transactionsSum] = await Promise.all([
+    supabase.from('users').select('id', { count: 'exact', head: true }),
+    supabase.from('products').select('id', { count: 'exact', head: true }),
+    supabase.from('orders').select('id', { count: 'exact', head: true }),
+    supabase.from('transactions').select('amount').eq('type', 'commission')
+  ]);
+  
+  const totalRevenue = transactionsSum.data?.reduce((sum, t) => sum + (t.amount || 0), 0) || 0;
+  
+  return {
+    totalUsers: usersCount.count || 0,
+    totalProducts: productsCount.count || 0,
+    totalOrders: ordersCount.count || 0,
+    totalRevenue: totalRevenue
+  };
+}
+
+export async function getSellerStats(sellerId: number) {
+  // Get seller's product IDs first
+  const { data: products } = await supabase
+    .from('products')
+    .select('id')
+    .eq('seller_id', sellerId);
+  
+  const productIds = products?.map(p => p.id) || [];
+  
+  const [productsCount, ordersData, reviewsData] = await Promise.all([
+    supabase.from('products').select('id', { count: 'exact', head: true }).eq('seller_id', sellerId),
+    supabase.from('orders').select('total_amount, seller_amount').eq('seller_id', sellerId).eq('status', 'delivered'),
+    productIds.length > 0 
+      ? supabase.from('reviews').select('rating').in('product_id', productIds)
+      : Promise.resolve({ data: [] })
+  ]);
+  
+  const totalSales = ordersData.data?.reduce((sum, o) => sum + (o.seller_amount || 0), 0) || 0;
+  const totalOrders = ordersData.data?.length || 0;
+  const avgRating = reviewsData.data?.length 
+    ? reviewsData.data.reduce((sum, r) => sum + r.rating, 0) / reviewsData.data.length 
+    : 0;
+  
+  return {
+    totalProducts: productsCount.count || 0,
+    totalOrders,
+    totalSales,
+    avgRating: Math.round(avgRating * 10) / 10
+  };
+}
+
+export async function getOrderItems(orderId: number) {
+  const { data, error } = await supabase
+    .from('order_items')
+    .select('*, products(*)')
+    .eq('order_id', orderId);
+  
+  if (error) {
+    console.error('[DB] Error getting order items:', error);
+    return [];
+  }
+  
+  return data;
+}
+
+export async function getUserReview(userId: number, productId: number) {
+  const { data, error } = await supabase
+    .from('reviews')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('product_id', productId)
+    .single();
+  
+  if (error && error.code !== 'PGRST116') {
+    console.error('[DB] Error getting user review:', error);
+  }
+  
+  return data;
+}
+
+export async function getUserConversations(userId: number) {
+  // Get all unique conversations for a user
+  const { data, error } = await supabase
+    .from('messages')
+    .select('sender_id, receiver_id, created_at')
+    .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
+    .order('created_at', { ascending: false });
+  
+  if (error) {
+    console.error('[DB] Error getting conversations:', error);
+    return [];
+  }
+  
+  // Get unique user IDs
+  const userIds = new Set<number>();
+  data.forEach(msg => {
+    if (msg.sender_id !== userId) userIds.add(msg.sender_id);
+    if (msg.receiver_id !== userId) userIds.add(msg.receiver_id);
+  });
+  
+  // Get user details
+  const { data: users } = await supabase
+    .from('users')
+    .select('id, name, profile_image')
+    .in('id', Array.from(userIds));
+  
+  return users || [];
+}
+
+export async function getUserWithdrawals(userId: number) {
+  return getWithdrawalRequests({ userId });
+}
+
+export async function getTransactionByRef(refNumber: string) {
+  const { data, error } = await supabase
+    .from('transactions')
+    .select('*')
+    .eq('ref_number', refNumber)
+    .single();
+  
+  if (error && error.code !== 'PGRST116') {
+    console.error('[DB] Error getting transaction by ref:', error);
+  }
+  
+  return data;
 }

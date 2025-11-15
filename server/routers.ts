@@ -310,11 +310,7 @@ export const appRouter = router({
         quantity: z.number().optional().default(1),
       }))
       .mutation(async ({ ctx, input }) => {
-        return db.addToCart({
-          userId: ctx.user.id,
-          productId: input.productId,
-          quantity: input.quantity,
-        });
+        return db.addToCart(ctx.user.id, input.productId, input.quantity);
       }),
 
     update: protectedProcedure
@@ -648,12 +644,11 @@ export const appRouter = router({
         }
 
         // Create order items
-        for (const itemData of orderItemsData) {
-          await db.createOrderItem({
-            orderId: order.id,
-            ...itemData,
-          });
-        }
+        const orderItemsToCreate = orderItemsData.map(itemData => ({
+          order_id: order.id,
+          ...itemData,
+        }));
+        await db.createOrderItems(orderItemsToCreate);
 
         // Deduct from buyer's wallet
         await db.updateUserWallet(ctx.user.id, -totalAmount);
@@ -703,7 +698,13 @@ export const appRouter = router({
         role: z.enum(['buyer', 'seller']).optional().default('buyer'),
       }))
       .query(async ({ ctx, input }) => {
-        return db.getUserOrders(ctx.user.id, input.role);
+        const filters: any = {};
+        if (input.role === 'buyer') {
+          filters.buyerId = ctx.user.id;
+        } else if (input.role === 'seller') {
+          filters.sellerId = ctx.user.id;
+        }
+        return db.getOrders(filters);
       }),
 
     get: protectedProcedure
@@ -891,11 +892,11 @@ export const appRouter = router({
         orderId: z.number().optional(),
       }))
       .query(async ({ ctx, input }) => {
-        return db.getConversation(ctx.user.id, input.userId, input.orderId);
+        return db.getConversation(ctx.user.id, input.userId);
       }),
 
     getSupportMessages: protectedProcedure.query(async ({ ctx }) => {
-      return db.getSupportMessages(ctx.user.id);
+      return db.getSupportMessages();
     }),
 
     markAsRead: protectedProcedure
@@ -957,7 +958,11 @@ export const appRouter = router({
         status: z.string().optional(),
       }))
       .query(async ({ input }) => {
-        return db.getAllDisputes(input.status);
+        const filters: any = {};
+        if (input.status) {
+          filters.status = input.status;
+        }
+        return db.getDisputes(filters);
       }),
 
     resolve: adminProcedure

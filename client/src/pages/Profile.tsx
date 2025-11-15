@@ -19,7 +19,7 @@ export default function Profile() {
   
   const [profileForm, setProfileForm] = useState({
     name: user?.name || "",
-    profileImage: user?.profileImage || "",
+    profileImage: user?.profile_image || "",
   });
 
   const [bankForm, setBankForm] = useState({
@@ -129,7 +129,7 @@ export default function Profile() {
                     </div>
                     <p className="text-sm text-muted-foreground">
                       ยอดเงิน: <span className="font-bold text-primary">
-                        ฿{((user?.walletBalance || 0) / 100).toFixed(2)}
+                        ฿{((user?.wallet_balance || 0) / 100).toFixed(2)}
                       </span>
                     </p>
                   </div>
@@ -181,7 +181,7 @@ export default function Profile() {
                   <div>
                     <p className="text-sm text-muted-foreground">ยอดเงินคงเหลือ</p>
                     <p className="text-3xl font-bold price-tag">
-                      ฿{((user?.walletBalance || 0) / 100).toFixed(2)}
+                      ฿{((user?.wallet_balance || 0) / 100).toFixed(2)}
                     </p>
                   </div>
                 </div>
