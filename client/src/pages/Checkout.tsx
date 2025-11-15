@@ -1,4 +1,5 @@
 import { useState } from "react";
+import Header from "@/components/Header";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -47,6 +48,7 @@ export default function Checkout() {
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
+      <Header />
         <Card className="p-8 text-center max-w-md">
           <h2 className="text-2xl font-bold mb-4">กรุณาเข้าสู่ระบบ</h2>
           <Button

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import Header from "@/components/Header";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -68,6 +69,7 @@ export default function Products() {
 
   return (
     <div className="min-h-screen bg-background">
+      <Header />
       {/* Header */}
       <div className="border-b border-border bg-card/50">
         <div className="container py-6">

@@ -855,6 +855,98 @@ export const appRouter = router({
       .query(async ({ input }) => {
         return db.getProductReviews(input.productId);
       }),
+
+    create: protectedProcedure
+      .input(z.object({
+        orderId: z.number(),
+        productId: z.number(),
+        rating: z.number().min(1).max(5),
+        comment: z.string().optional(),
+        images: z.array(z.string()).optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        // Verify order exists and belongs to user
+        const order = await db.getOrderById(input.orderId);
+        if (!order) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Order not found' });
+        }
+        if (order.buyerId !== ctx.user.id) {
+          throw new TRPCError({ code: 'FORBIDDEN', message: 'Not your order' });
+        }
+        if (order.status !== 'completed') {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: 'Order not completed yet' });
+        }
+
+        // Check if already reviewed
+        const existingReview = await db.getReviewByOrderAndProduct(input.orderId, input.productId);
+        if (existingReview) {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: 'Already reviewed this product' });
+        }
+
+        // Create review
+        const review = await db.createReview({
+          orderId: input.orderId,
+          productId: input.productId,
+          userId: ctx.user.id,
+          rating: input.rating,
+          comment: input.comment,
+          images: input.images,
+        });
+
+        // Update product rating
+        await db.updateProductRating(input.productId);
+
+        return review;
+      }),
+
+    update: protectedProcedure
+      .input(z.object({
+        reviewId: z.number(),
+        rating: z.number().min(1).max(5).optional(),
+        comment: z.string().optional(),
+        images: z.array(z.string()).optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        // Verify review belongs to user
+        const review = await db.getReviewById(input.reviewId);
+        if (!review) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Review not found' });
+        }
+        if (review.userId !== ctx.user.id) {
+          throw new TRPCError({ code: 'FORBIDDEN', message: 'Not your review' });
+        }
+
+        await db.updateReview(input.reviewId, {
+          rating: input.rating,
+          comment: input.comment,
+          images: input.images,
+        });
+
+        // Update product rating
+        await db.updateProductRating(review.productId);
+
+        return { success: true };
+      }),
+
+    delete: protectedProcedure
+      .input(z.object({ reviewId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        // Verify review belongs to user
+        const review = await db.getReviewById(input.reviewId);
+        if (!review) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Review not found' });
+        }
+        if (review.userId !== ctx.user.id && ctx.user.role !== 'admin') {
+          throw new TRPCError({ code: 'FORBIDDEN', message: 'Not your review' });
+        }
+
+        await db.deleteReview(input.reviewId);
+
+        // Update product rating
+        await db.updateProductRating(review.productId);
+
+        return { success: true };
+      }),
   }),
 
   // ============= CHAT =============

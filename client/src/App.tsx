@@ -17,6 +17,7 @@ import Profile from "./pages/Profile";
 import Chat from "./pages/Chat";
 import Notifications from "./pages/Notifications";
 import Orders from "./pages/Orders";
+import Wishlist from "./pages/Wishlist";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -34,6 +35,7 @@ function Router() {
       <Route path={"/chat/:conversationId?"} component={Chat} />
       <Route path={"/notifications"} component={Notifications} />
       <Route path={"/orders/:id?"} component={Orders} />
+      <Route path={"/wishlist"} component={Wishlist} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

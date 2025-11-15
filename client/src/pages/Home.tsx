@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { Link } from "wouter";
 import { useState } from "react";
+import Header from "@/components/Header";
 
 export default function Home() {
   const { user, isAuthenticated } = useAuth();
@@ -31,7 +32,8 @@ export default function Home() {
 
   return (
     <div className="min-h-screen">
-      {/* Navigation */}
+      <Header />
+      {/* Old Navigation - Remove later
       <nav className="sticky top-0 z-50 glass border-b border-border">
         <div className="container py-4">
           <div className="flex items-center justify-between">

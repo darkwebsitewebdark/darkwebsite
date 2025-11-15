@@ -559,20 +559,6 @@ export async function markAllNotificationsAsRead(userId: number) {
 
 // ============= REVIEW FUNCTIONS =============
 
-export async function createReview(review: any) {
-  const { data, error } = await supabase
-    .from('reviews')
-    .insert(review)
-    .select()
-    .single();
-  
-  if (error) {
-    console.error('[DB] Error creating review:', error);
-    throw error;
-  }
-  
-  return data;
-}
 
 export async function getProductReviews(productId: number) {
   const { data, error } = await supabase
@@ -1035,4 +1021,121 @@ export async function getTransactionByRef(refNumber: string) {
   }
   
   return data;
+}
+
+
+// ============= REVIEW FUNCTIONS =============
+
+export async function getReviewById(reviewId: number) {
+  const { data, error } = await supabase
+    .from('reviews')
+    .select('*')
+    .eq('id', reviewId)
+    .single();
+  
+  if (error) throw error;
+  return data;
+}
+
+export async function getReviewByOrderAndProduct(orderId: number, productId: number) {
+  const { data, error } = await supabase
+    .from('reviews')
+    .select('*')
+    .eq('order_id', orderId)
+    .eq('product_id', productId)
+    .single();
+  
+  if (error && error.code !== 'PGRST116') throw error; // PGRST116 = not found
+  return data;
+}
+
+export async function createReview(review: {
+  orderId: number;
+  productId: number;
+  userId: number;
+  rating: number;
+  comment?: string;
+  images?: string[];
+}) {
+  const { data, error } = await supabase
+    .from('reviews')
+    .insert({
+      order_id: review.orderId,
+      product_id: review.productId,
+      user_id: review.userId,
+      rating: review.rating,
+      comment: review.comment,
+      images: review.images,
+    })
+    .select()
+    .single();
+  
+  if (error) throw error;
+  return data;
+}
+
+export async function updateReview(
+  reviewId: number,
+  updates: {
+    rating?: number;
+    comment?: string;
+    images?: string[];
+  }
+) {
+  const { error } = await supabase
+    .from('reviews')
+    .update(updates)
+    .eq('id', reviewId);
+  
+  if (error) throw error;
+}
+
+export async function deleteReview(reviewId: number) {
+  const { error } = await supabase
+    .from('reviews')
+    .delete()
+    .eq('id', reviewId);
+  
+  if (error) throw error;
+}
+
+export async function updateProductRating(productId: number) {
+  // Calculate average rating
+  const { data: reviews, error } = await supabase
+    .from('reviews')
+    .select('rating')
+    .eq('product_id', productId);
+  
+  if (error) throw error;
+  
+  if (!reviews || reviews.length === 0) {
+    // No reviews, set to 0
+    await supabase
+      .from('products')
+      .update({ rating: 0, review_count: 0 })
+      .eq('id', productId);
+    return;
+  }
+  
+  const avgRating = reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length;
+  
+  await supabase
+    .from('products')
+    .update({
+      rating: Math.round(avgRating * 10) / 10, // Round to 1 decimal
+      review_count: reviews.length,
+    })
+    .eq('id', productId);
+}
+
+export async function updateOrderTracking(orderId: number, trackingNumber: string, shippingProvider: string) {
+  const { error } = await supabase
+    .from('orders')
+    .update({
+      tracking_number: trackingNumber,
+      shipping_provider: shippingProvider,
+    })
+    .eq('id', orderId);
+  
+  if (error) throw error;
 }

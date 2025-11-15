@@ -1,4 +1,5 @@
 import { useState } from "react";
+import Header from "@/components/Header";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -52,6 +53,7 @@ export default function ProductDetail() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
+      <Header />
         <div className="animate-pulse text-muted-foreground">กำลังโหลด...</div>
       </div>
     );
