@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import Header from "@/components/Header";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -19,7 +19,10 @@ type Product = {
   sales: number;
   stock: number;
   status: string;
-  categoryId: number;
+  category_id: number;
+  seller_id: number;
+  created_at: string;
+  updated_at: string;
 };
 
 type Category = {
@@ -36,7 +39,7 @@ export default function Products() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string>("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [sortBy, setSortBy] = useState("newest");
 
   // Get category from URL query params
@@ -79,14 +82,14 @@ export default function Products() {
         query = query.or(`name.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`);
       }
 
-      if (selectedCategory) {
-        query = query.eq('categoryId', parseInt(selectedCategory));
+      if (selectedCategory && selectedCategory !== 'all') {
+        query = query.eq('category_id', parseInt(selectedCategory));
       }
 
       // Apply sorting
       switch (sortBy) {
         case 'newest':
-          query = query.order('createdAt', { ascending: false });
+          query = query.order('created_at', { ascending: false });
           break;
         case 'price_low':
           query = query.order('price', { ascending: true });
@@ -98,12 +101,19 @@ export default function Products() {
           query = query.order('sales', { ascending: false });
           break;
         default:
-          query = query.order('createdAt', { ascending: false });
+          query = query.order('created_at', { ascending: false });
       }
 
       query = query.limit(50);
 
-      const { data } = await query;
+      const { data, error } = await query;
+
+      console.log('[Products] Fetch result:', { data, error, count: data?.length });
+
+      if (error) {
+        console.error('[Products] Fetch error:', error);
+        toast.error(`เกิดข้อผิดพลาด: ${error.message}`);
+      }
 
       if (data) {
         setProducts(data);
@@ -124,25 +134,25 @@ export default function Products() {
     try {
       // Check if item already in cart
       const { data: existingItem } = await supabase
-        .from('cartItems')
+        .from('cart_items')
         .select('*')
-        .eq('userId', user.id)
-        .eq('productId', productId)
+        .eq('user_id', user.id)
+        .eq('product_id', productId)
         .single();
 
       if (existingItem) {
         // Update quantity
         await supabase
-          .from('cartItems')
+          .from('cart_items')
           .update({ quantity: existingItem.quantity + 1 })
           .eq('id', existingItem.id);
       } else {
         // Insert new item
         await supabase
-          .from('cartItems')
+          .from('cart_items')
           .insert({
-            userId: user.id,
-            productId,
+            user_id: user.id,
+            product_id: productId,
             quantity: 1
           });
       }
@@ -165,8 +175,8 @@ export default function Products() {
       const { data: existing } = await supabase
         .from('wishlist')
         .select('*')
-        .eq('userId', user.id)
-        .eq('productId', productId)
+        .eq('user_id', user.id)
+        .eq('product_id', productId)
         .single();
 
       if (existing) {
@@ -177,8 +187,8 @@ export default function Products() {
       await supabase
         .from('wishlist')
         .insert({
-          userId: user.id,
-          productId
+          user_id: user.id,
+          product_id: productId
         });
 
       toast.success("เพิ่มลงรายการโปรดแล้ว");
@@ -192,51 +202,53 @@ export default function Products() {
     <div className="min-h-screen bg-background">
       <Header />
 
-      <div className="container py-8">
+      <main className="container py-8">
+        {/* Page Header */}
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold neon-text-red mb-2">สินค้าทั้งหมด</h1>
+          <p className="text-muted-foreground">สินค้าคุณภาพ ราคาถูก จากผู้ขายทั่วประเทศ</p>
+        </div>
+
         {/* Filters */}
-        <div className="mb-8 space-y-4">
-          <h1 className="text-4xl font-bold">สินค้าทั้งหมด</h1>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Search */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-              <Input
-                placeholder="ค้นหาสินค้า..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-
-            {/* Category Filter */}
-            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-              <SelectTrigger>
-                <SelectValue placeholder="ทุกหมวดหมู่" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">ทุกหมวดหมู่</SelectItem>
-                {categories.map((category) => (
-                  <SelectItem key={category.id} value={category.id.toString()}>
-                    {category.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            {/* Sort */}
-            <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger>
-                <SelectValue placeholder="เรียงตาม" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="newest">ใหม่ล่าสุด</SelectItem>
-                <SelectItem value="popular">ขายดี</SelectItem>
-                <SelectItem value="price_low">ราคาต่ำ - สูง</SelectItem>
-                <SelectItem value="price_high">ราคาสูง - ต่ำ</SelectItem>
-              </SelectContent>
-            </Select>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+            <Input
+              placeholder="ค้นหาสินค้า..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
           </div>
+
+          {/* Category Filter */}
+          <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+            <SelectTrigger>
+              <SelectValue placeholder="ทุกหมวดหมู่" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">ทุกหมวดหมู่</SelectItem>
+              {categories.map((category) => (
+                <SelectItem key={category.id} value={category.id.toString()}>
+                  {category.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* Sort */}
+          <Select value={sortBy} onValueChange={setSortBy}>
+            <SelectTrigger>
+              <SelectValue placeholder="เรียงตาม" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="newest">ใหม่ล่าสุด</SelectItem>
+              <SelectItem value="popular">ขายดี</SelectItem>
+              <SelectItem value="price_low">ราคาต่ำ - สูง</SelectItem>
+              <SelectItem value="price_high">ราคาสูง - ต่ำ</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         {/* Products Grid */}
@@ -253,91 +265,92 @@ export default function Products() {
             ))}
           </div>
         ) : products.length === 0 ? (
-          <div className="text-center py-20">
+          <Card className="p-12 text-center">
             <ShoppingBag className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
-            <h2 className="text-2xl font-bold mb-2">ไม่พบสินค้า</h2>
-            <p className="text-muted-foreground">ลองค้นหาด้วยคำอื่นหรือเปลี่ยนตัวกรอง</p>
-          </div>
+            <h3 className="text-xl font-bold mb-2">ไม่พบสินค้า</h3>
+            <p className="text-muted-foreground mb-4">ลองค้นหาด้วยคำอื่นหรือเปลี่ยนหมวดหมู่</p>
+            <Button onClick={() => {
+              setSearchQuery("");
+              setSelectedCategory("all");
+            }}>
+              รีเซ็ตการค้นหา
+            </Button>
+          </Card>
         ) : (
-          <>
-            <div className="mb-4 text-muted-foreground">
-              พบ {products.length} สินค้า
-            </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
+            {products.map((product) => (
+              <Card key={product.id} className="card-neon overflow-hidden group">
+                <Link href={`/product/${product.id}`}>
+                  {/* Product Image */}
+                  <div className="aspect-square relative overflow-hidden bg-muted">
+                    {product.images && product.images.length > 0 ? (
+                      <img
+                        src={product.images[0]}
+                        alt={product.name}
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                        <ShoppingBag className="w-12 h-12" />
+                      </div>
+                    )}
 
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
-              {products.map((product) => (
-                <Card key={product.id} className="overflow-hidden hover:border-primary transition-all hover:shadow-lg group">
+                    {/* Stock Badge */}
+                    {product.stock === 0 && (
+                      <div className="absolute top-2 right-2 badge-street bg-destructive text-destructive-foreground">
+                        หมด
+                      </div>
+                    )}
+                  </div>
+                </Link>
+
+                {/* Product Info */}
+                <div className="p-4">
                   <Link href={`/product/${product.id}`}>
-                    <div className="aspect-square bg-muted overflow-hidden relative">
-                      {product.images?.[0] ? (
-                        <img
-                          src={product.images[0]}
-                          alt={product.name}
-                          className="w-full h-full object-cover group-hover:scale-110 transition-transform"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <ShoppingBag className="w-12 h-12 text-muted-foreground" />
-                        </div>
-                      )}
-
-                      {/* Wishlist Button */}
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="absolute top-2 right-2 bg-background/80 hover:bg-background"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          handleAddToWishlist(product.id);
-                        }}
-                      >
-                        <Heart className="w-4 h-4" />
-                      </Button>
-                    </div>
+                    <h3 className="font-bold text-sm mb-2 line-clamp-2 min-h-[2.5rem] hover:text-primary transition-colors">
+                      {product.name}
+                    </h3>
                   </Link>
 
-                  <div className="p-4">
-                    <Link href={`/product/${product.id}`}>
-                      <h3 className="font-semibold mb-2 line-clamp-2 hover:text-primary cursor-pointer">
-                        {product.name}
-                      </h3>
-                    </Link>
-
-                    <div className="flex items-center justify-between mb-3">
-                      <p className="text-xl font-bold text-primary">
-                        ฿{(product.price / 100).toFixed(2)}
-                      </p>
-                      <div className="flex items-center gap-1">
-                        <Star className="w-4 h-4 fill-yellow-500 text-yellow-500" />
-                        <span className="text-sm text-muted-foreground">4.5</span>
-                      </div>
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-xl font-bold text-primary">
+                      ฿{(product.price / 100).toFixed(2)}
+                    </p>
+                    <div className="flex items-center gap-1">
+                      <Star className="w-4 h-4 fill-yellow-500 text-yellow-500" />
+                      <span className="text-sm">4.5</span>
                     </div>
+                  </div>
 
-                    <div className="flex items-center justify-between mb-3">
-                      <p className="text-xs text-muted-foreground">
-                        ขายแล้ว {product.sales || 0}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        คงเหลือ {product.stock}
-                      </p>
-                    </div>
+                  <div className="text-xs text-muted-foreground mb-3">
+                    ขายแล้ว {product.sales || 0} | คงเหลือ {product.stock}
+                  </div>
 
+                  {/* Action Buttons */}
+                  <div className="flex gap-2">
                     <Button
                       size="sm"
-                      className="w-full"
+                      className="flex-1"
                       onClick={() => handleAddToCart(product.id)}
                       disabled={product.stock === 0}
                     >
-                      <ShoppingCart className="w-4 h-4 mr-2" />
-                      {product.stock === 0 ? 'สินค้าหมด' : 'ใส่ตะกร้า'}
+                      <ShoppingCart className="w-4 h-4 mr-1" />
+                      ใส่ตะกร้า
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleAddToWishlist(product.id)}
+                    >
+                      <Heart className="w-4 h-4" />
                     </Button>
                   </div>
-                </Card>
-              ))}
-            </div>
-          </>
+                </div>
+              </Card>
+            ))}
+          </div>
         )}
-      </div>
+      </main>
     </div>
   );
 }
