@@ -453,3 +453,14 @@ Project is complete when:
   - [x] Deploy to production (auto-deployed via GitHub)
   - [ ] Test on production (pending env vars)
   - [x] Setup monitoring (Vercel Analytics ready)
+
+
+## 🚨 Critical: Fix Vercel Production Deployment
+
+- [ ] Extract Supabase credentials from .env
+- [ ] Install and configure Vercel CLI
+- [ ] Set Vercel environment variables
+- [ ] Configure Google OAuth in Supabase
+- [ ] Trigger Vercel redeploy
+- [ ] Verify website loads at https://darkwebsite.vercel.app
+- [ ] Test all features on production
