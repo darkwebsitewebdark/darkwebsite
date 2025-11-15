@@ -457,10 +457,12 @@ Project is complete when:
 
 ## 🚨 Critical: Fix Vercel Production Deployment
 
-- [ ] Extract Supabase credentials from .env
-- [ ] Install and configure Vercel CLI
-- [ ] Set Vercel environment variables
-- [ ] Configure Google OAuth in Supabase
-- [ ] Trigger Vercel redeploy
-- [ ] Verify website loads at https://darkwebsite.vercel.app
+- [x] Extract Supabase credentials from .env
+- [x] Add fallback Supabase credentials to code
+- [x] Fix title (was %VITE_APP_TITLE%)
+- [x] Fix Products page Select error
+- [x] Add SPA routing to vercel.json
+- [x] Create Vercel Serverless Function for API
+- [ ] Fix API 500 errors (TypeScript/bundling issues)
+- [ ] Configure Vercel for TypeScript Serverless Functions
 - [ ] Test all features on production
