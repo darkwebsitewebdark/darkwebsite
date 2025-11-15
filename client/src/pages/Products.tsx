@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/lib/supabase";
+import { trpc } from "@/lib/trpc";
 import { Search, Star, Heart, ShoppingCart, ShoppingBag } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { toast } from "sonner";
@@ -125,43 +126,22 @@ export default function Products() {
     fetchProducts();
   }, [searchQuery, selectedCategory, sortBy]);
 
+  const addToCartMutation = trpc.cart.add.useMutation({
+    onSuccess: (data) => {
+      toast.success(data.message);
+    },
+    onError: (error) => {
+      toast.error(error.message || 'เกิดข้อผิดพลาด');
+    },
+  });
+
   const handleAddToCart = async (productId: number) => {
     if (!isAuthenticated || !user) {
       toast.error("กรุณาเข้าสู่ระบบก่อน");
       return;
     }
 
-    try {
-      // Check if item already in cart
-      const { data: existingItem } = await supabase
-        .from('cart_items')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('product_id', productId)
-        .single();
-
-      if (existingItem) {
-        // Update quantity
-        await supabase
-          .from('cart_items')
-          .update({ quantity: existingItem.quantity + 1 })
-          .eq('id', existingItem.id);
-      } else {
-        // Insert new item
-        await supabase
-          .from('cart_items')
-          .insert({
-            user_id: user.id,
-            product_id: productId,
-            quantity: 1
-          });
-      }
-
-      toast.success("เพิ่มสินค้าลงตะกร้าแล้ว");
-    } catch (error) {
-      console.error('Add to cart error:', error);
-      toast.error("เกิดข้อผิดพลาด");
-    }
+    addToCartMutation.mutate({ productId, quantity: 1 });
   };
 
   const handleAddToWishlist = async (productId: number) => {

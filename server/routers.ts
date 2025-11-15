@@ -6,6 +6,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { storagePut } from "./storage";
 import * as db from "./db";
+import { supabaseAdmin } from "./supabaseAdmin";
 
 // Admin-only procedure
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
@@ -301,7 +302,16 @@ export const appRouter = router({
   // ============= CART =============
   cart: router({
     list: protectedProcedure.query(async ({ ctx }) => {
-      return db.getCartItems(ctx.user.id);
+      const { data, error } = await supabaseAdmin
+        .from('cart_items')
+        .select(`
+          *,
+          product:products(*)
+        `)
+        .eq('user_id', ctx.user.id);
+      
+      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+      return data || [];
     }),
 
     add: protectedProcedure
@@ -310,11 +320,36 @@ export const appRouter = router({
         quantity: z.number().optional().default(1),
       }))
       .mutation(async ({ ctx, input }) => {
-        return db.addToCart({
-          userId: ctx.user.id,
-          productId: input.productId,
-          quantity: input.quantity,
-        });
+        // Check if item already exists
+        const { data: existing } = await supabaseAdmin
+          .from('cart_items')
+          .select('*')
+          .eq('user_id', ctx.user.id)
+          .eq('product_id', input.productId)
+          .single();
+
+        if (existing) {
+          // Update quantity
+          const { error } = await supabaseAdmin
+            .from('cart_items')
+            .update({ quantity: existing.quantity + input.quantity })
+            .eq('id', existing.id);
+          
+          if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+          return { success: true, message: 'เพิ่มจำนวนแล้ว' };
+        } else {
+          // Insert new item
+          const { error } = await supabaseAdmin
+            .from('cart_items')
+            .insert({
+              user_id: ctx.user.id,
+              product_id: input.productId,
+              quantity: input.quantity
+            });
+          
+          if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+          return { success: true, message: 'เพิ่มสินค้าลงตะกร้าแล้ว' };
+        }
       }),
 
     update: protectedProcedure
@@ -323,19 +358,34 @@ export const appRouter = router({
         quantity: z.number(),
       }))
       .mutation(async ({ input }) => {
-        await db.updateCartItem(input.id, input.quantity);
+        const { error } = await supabaseAdmin
+          .from('cart_items')
+          .update({ quantity: input.quantity })
+          .eq('id', input.id);
+        
+        if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
         return { success: true };
       }),
 
     remove: protectedProcedure
       .input(z.object({ id: z.number() }))
       .mutation(async ({ input }) => {
-        await db.removeFromCart(input.id);
+        const { error } = await supabaseAdmin
+          .from('cart_items')
+          .delete()
+          .eq('id', input.id);
+        
+        if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
         return { success: true };
       }),
 
     clear: protectedProcedure.mutation(async ({ ctx }) => {
-      await db.clearCart(ctx.user.id);
+      const { error } = await supabaseAdmin
+        .from('cart_items')
+        .delete()
+        .eq('user_id', ctx.user.id);
+      
+      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
       return { success: true };
     }),
   }),
