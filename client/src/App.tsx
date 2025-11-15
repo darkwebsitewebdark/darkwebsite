@@ -16,6 +16,7 @@ import Orders from "./pages/Orders";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import AuthCallback from "./pages/AuthCallback";
+import SellerRegister from "./pages/SellerRegister";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -26,6 +27,7 @@ function Router() {
       <Route path={"/product/:id"} component={ProductDetail} />
       <Route path={"/cart"} component={Cart} />
       <Route path={"/checkout"} component={Checkout} />
+      <Route path={"/seller/register"} component={SellerRegister} />
       <Route path={"/seller/dashboard"} component={SellerDashboard} />
       <Route path={"/admin/dashboard"} component={AdminDashboard} />
       <Route path={"/profile"} component={Profile} />
