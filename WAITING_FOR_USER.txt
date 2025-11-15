@@ -1,0 +1,31 @@
+╔══════════════════════════════════════════════════════════════╗
+║                  🟡 WAITING FOR USER ACTION                  ║
+╠══════════════════════════════════════════════════════════════╣
+║                                                              ║
+║  Task: Set up Vercel Environment Variables                  ║
+║  Time: 2-3 minutes                                           ║
+║                                                              ║
+║  Required Variables:                                         ║
+║  1. VITE_SUPABASE_URL                                        ║
+║  2. VITE_SUPABASE_ANON_KEY                                   ║
+║                                                              ║
+║  URL: https://vercel.com/darkwebsitewebdarks-projects/      ║
+║       darkwebsite/settings/environment-variables             ║
+║                                                              ║
+║  When done, say: "เสร็จแล้ว"                                 ║
+║                                                              ║
+╠══════════════════════════════════════════════════════════════╣
+║  Progress: 70% Complete (12/17 Phases)                       ║
+║  Commits Today: 9                                            ║
+║  Time Elapsed: 1 hour 5 minutes                              ║
+╚══════════════════════════════════════════════════════════════╝
+
+Next Steps After Setup:
+1. Test Register/Login
+2. Add 1 test product
+3. Test Cart & Checkout
+4. Test PromptPay QR Code
+5. Test Order Tracking
+6. Final Report
+
+Status: 🟡 Waiting...
