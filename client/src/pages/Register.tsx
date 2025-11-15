@@ -67,8 +67,19 @@ export default function Register() {
       }
 
       if (data.user) {
-        toast.success("สมัครสมาชิกสำเร็จ! กรุณาเข้าสู่ระบบ");
-        setLocation("/login");
+        // Auto login after register
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+
+        if (signInError) {
+          toast.success("สมัครสมาชิกสำเร็จ! กรุณาเข้าสู่ระบบ");
+          setLocation("/login");
+        } else {
+          toast.success("สมัครสมาชิกและเข้าสู่ระบบสำเร็จ!");
+          setLocation("/");
+        }
       }
     } catch (error) {
       console.error('Register error:', error);
