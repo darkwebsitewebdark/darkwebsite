@@ -140,3 +140,36 @@
 - [x] Frontend: Progress Bar
 - [x] Integration: Profile Page - อัพโหลดรูปโปรไฟล์
 - [x] Integration: Seller Dashboard - อัพโหลดรูปสินค้า
+
+## 🔄 Phase 17: Migration to Vercel + Supabase
+
+### Database Migration
+- [x] เชื่อมต่อ Supabase database
+- [x] แปลง schema จาก MySQL เป็น PostgreSQL
+- [x] สร้าง 14 ตาราง พร้อม indexes และ RLS
+- [x] ทดสอบการเชื่อมต่อ database
+
+### Authentication Migration
+- [x] ติดตั้ง Supabase Auth SDK
+- [x] สร้าง Supabase client configuration
+- [x] สร้าง Auth Context (SupabaseAuthProvider)
+- [x] สร้างหน้า Login/Register ใหม่ (Email + Google OAuth)
+- [x] อัพเดท App.tsx เพื่อใช้ Supabase Auth
+- [ ] ถอด Manus OAuth code ออกทั้งหมด
+- [ ] อัพเดท backend API เพื่อใช้ Supabase Auth
+- [ ] ทดสอบ Authentication flow
+
+### Vercel Deployment
+- [x] สร้าง vercel.json configuration
+- [x] สร้างคู่มือ VERCEL_DEPLOYMENT.md
+- [x] สร้างคู่มือ MIGRATION_GUIDE.md
+- [ ] ตั้งค่า Environment Variables บน Vercel Dashboard
+- [ ] เชื่อมต่อ GitHub repository กับ Vercel
+- [ ] ทดสอบ Auto deployment
+- [ ] ตรวจสอบ Production build
+
+### Code Cleanup
+- [ ] ลบ Manus-specific code และ dependencies
+- [ ] อัพเดท package.json
+- [ ] ลบ unused files
+- [ ] อัพเดท README.md และ documentation
