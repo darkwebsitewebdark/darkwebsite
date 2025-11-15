@@ -955,6 +955,127 @@ export const appRouter = router({
           images: input.images,
         });
       }),
+
+    createWithPromptPay: protectedProcedure
+      .input(z.object({
+        items: z.array(z.object({
+          productId: z.number(),
+          quantity: z.number(),
+        })),
+        shippingAddress: z.object({
+          name: z.string(),
+          phone: z.string(),
+          address: z.string(),
+          province: z.string(),
+          district: z.string(),
+          subdistrict: z.string(),
+          postalCode: z.string(),
+        }),
+        promptPayPhone: z.string(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        // Get products and calculate total
+        const productIds = input.items.map(item => item.productId);
+        const productsList = await db.getProducts({ limit: 100 });
+        const productsMap = new Map(productsList.map(p => [p.id, p]));
+
+        let totalAmount = 0;
+        const orderItemsData = [];
+
+        for (const item of input.items) {
+          const product = productsMap.get(item.productId);
+          if (!product) {
+            throw new TRPCError({ code: 'NOT_FOUND', message: `Product ${item.productId} not found` });
+          }
+          if (product.stock < item.quantity) {
+            throw new TRPCError({ code: 'BAD_REQUEST', message: `Insufficient stock for ${product.name}` });
+          }
+
+          const subtotal = product.price * item.quantity;
+          totalAmount += subtotal;
+
+          orderItemsData.push({
+            productId: product.id,
+            productName: product.name,
+            productImage: product.images?.[0],
+            quantity: item.quantity,
+            price: product.price,
+            subtotal,
+          });
+        }
+
+        // Get seller and commission rate
+        const firstProduct = productsMap.get(input.items[0].productId)!;
+        const category = await db.getCategoryById(firstProduct.categoryId);
+        const commissionRate = category?.commissionRate || 5;
+        const commissionAmount = Math.round(totalAmount * commissionRate / 100);
+        const sellerAmount = totalAmount - commissionAmount;
+
+        // Generate order number
+        const orderNumber = `ORD-${Date.now()}-${ctx.user.id}`;
+
+        // Create order (pending payment)
+        const order = await db.createOrder({
+          buyerId: ctx.user.id,
+          sellerId: firstProduct.sellerId,
+          orderNumber,
+          totalAmount,
+          commissionAmount,
+          sellerAmount,
+          status: 'pending_payment',
+          shippingAddress: input.shippingAddress,
+        });
+
+        if (!order) {
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to create order' });
+        }
+
+        // Create order items
+        for (const itemData of orderItemsData) {
+          await db.createOrderItem({
+            orderId: order.id,
+            ...itemData,
+          });
+        }
+
+        // Generate PromptPay QR Code
+        const { createPaymentRequest } = await import('./promptpay');
+        const payment = createPaymentRequest(
+          ctx.user.id,
+          totalAmount,
+          input.promptPayPhone
+        );
+
+        // Store payment info in database
+        const { data: promptpayData, error: promptpayError } = await supabaseAdmin
+          .from('promptpay_payments')
+          .insert({
+            order_id: order.id,
+            user_id: ctx.user.id,
+            amount: payment.amount,
+            ref_number: payment.refNumber,
+            qr_payload: payment.qrPayload,
+            qr_code_url: payment.qrCodeUrl,
+            expires_at: payment.expiresAt.toISOString(),
+            status: 'pending',
+          })
+          .select()
+          .single();
+
+        if (promptpayError) {
+          console.error('Failed to create PromptPay payment:', promptpayError);
+        }
+
+        return {
+          order,
+          payment: {
+            amount: payment.amount,
+            refNumber: payment.refNumber,
+            qrCodeUrl: payment.qrCodeUrl,
+            expiresAt: payment.expiresAt,
+          },
+        };
+      }),
   }),
 
   // ============= REVIEWS =============
