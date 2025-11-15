@@ -19,17 +19,17 @@ type Product = {
   name: string;
   description: string;
   price: number;
-  image_url: string;
   images: string[];
-  sales_count: number;
+  sales: number;
   stock: number;
+  status: string;
 };
 
 type Category = {
   id: number;
   name: string;
-  description: string;
-  image_url: string;
+  description: string | null;
+  icon: string | null;
 };
 
 export default function Home() {
@@ -46,8 +46,8 @@ export default function Home() {
       const { data: productsData } = await supabase
         .from('products')
         .select('*')
-        .eq('is_active', true)
-        .order('sales_count', { ascending: false })
+        .eq('status', 'active')
+        .order('sales', { ascending: false })
         .limit(8);
 
       if (productsData) {
@@ -160,18 +160,8 @@ export default function Home() {
               {categories.slice(0, 10).map((category) => (
                 <Link key={category.id} href={`/products?category=${category.id}`}>
                   <Card className="p-4 text-center hover:border-primary transition-colors cursor-pointer">
-                    <div className="w-16 h-16 rounded-full bg-muted mx-auto mb-3 overflow-hidden">
-                      {category.image_url ? (
-                        <img
-                          src={category.image_url}
-                          alt={category.name}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <ShoppingBag className="w-8 h-8 text-muted-foreground" />
-                        </div>
-                      )}
+                    <div className="w-16 h-16 rounded-full bg-muted mx-auto mb-3 overflow-hidden flex items-center justify-center">
+                      <ShoppingBag className="w-8 h-8 text-muted-foreground" />
                     </div>
                     <h3 className="font-semibold text-sm">{category.name}</h3>
                   </Card>
@@ -213,11 +203,17 @@ export default function Home() {
                 <Link key={product.id} href={`/product/${product.id}`}>
                   <Card className="overflow-hidden hover:border-primary transition-all hover:shadow-lg cursor-pointer">
                     <div className="aspect-square bg-muted overflow-hidden">
-                      <img
-                        src={product.images?.[0] || product.image_url}
-                        alt={product.name}
-                        className="w-full h-full object-cover hover:scale-110 transition-transform"
-                      />
+                      {product.images?.[0] ? (
+                        <img
+                          src={product.images[0]}
+                          alt={product.name}
+                          className="w-full h-full object-cover hover:scale-110 transition-transform"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <ShoppingBag className="w-12 h-12 text-muted-foreground" />
+                        </div>
+                      )}
                     </div>
                     <div className="p-4">
                       <h3 className="font-semibold mb-2 line-clamp-2">{product.name}</h3>
@@ -231,7 +227,7 @@ export default function Home() {
                         </div>
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        ขายแล้ว {product.sales_count || 0}
+                        ขายแล้ว {product.sales || 0}
                       </p>
                     </div>
                   </Card>
