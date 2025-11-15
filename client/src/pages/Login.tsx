@@ -1,137 +1,137 @@
-import { useState } from "react";
+import { useEffect } from "react";
+import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { signInWithEmail, signInWithGoogle } from "@/lib/auth";
-import { Link, useLocation } from "wouter";
-import { APP_TITLE } from "@/const";
-import { Mail, Lock, Chrome } from "lucide-react";
+import { APP_LOGO, APP_TITLE, getLoginUrl } from "@/const";
+import { LogIn, ShieldCheck, Zap, TrendingUp } from "lucide-react";
+import { useLocation } from "wouter";
 
 export default function Login() {
+  const { isAuthenticated, loading } = useAuth();
   const [, setLocation] = useLocation();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
 
-  const handleEmailLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-
-    const result = await signInWithEmail(email, password);
-    
-    if (result.success) {
+  useEffect(() => {
+    // Redirect if already logged in
+    if (!loading && isAuthenticated) {
       setLocation("/");
     }
+  }, [loading, isAuthenticated, setLocation]);
 
-    setIsLoading(false);
+  const handleLogin = () => {
+    window.location.href = getLoginUrl();
   };
 
-  const handleGoogleLogin = async () => {
-    setIsLoading(true);
-    await signInWithGoogle();
-    // Redirect will happen automatically
-  };
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-muted-foreground">กำลังโหลด...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <Card className="w-full max-w-md p-8">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4 relative crt-effect">
+      {/* Background effects */}
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-background to-secondary/10"></div>
+      <div className="absolute inset-0 spray-texture"></div>
+
+      <div className="w-full max-w-md relative z-10">
+        {/* Logo */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold mb-2">{APP_TITLE}</h1>
-          <p className="text-muted-foreground">เข้าสู่ระบบเพื่อเริ่มช้อปปิ้ง</p>
+          <img 
+            src={APP_LOGO} 
+            alt={APP_TITLE}
+            className="w-48 mx-auto mb-4 animate-float"
+          />
+          <h1 className="text-3xl font-bold neon-text-red mb-2">
+            เข้าสู่ระบบ
+          </h1>
+          <p className="text-muted-foreground">
+            เข้าสู่โลกของสตรีทมาร์เก็ต
+          </p>
         </div>
 
-        <form onSubmit={handleEmailLogin} className="space-y-4">
-          <div>
-            <Label htmlFor="email">อีเมล</Label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                id="email"
-                type="email"
-                placeholder="your@email.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="pl-10"
-                required
-              />
-            </div>
-          </div>
+        {/* Login Card */}
+        <Card className="card-neon p-8">
+          <div className="space-y-6">
+            {/* Benefits */}
+            <div className="space-y-4">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                  <ShieldCheck className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm mb-1">ปลอดภัย 100%</h3>
+                  <p className="text-xs text-muted-foreground">
+                    ระบบรักษาความปลอดภัยระดับสูง
+                  </p>
+                </div>
+              </div>
 
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <Label htmlFor="password">รหัสผ่าน</Label>
-              <Link href="/forgot-password">
-                <a className="text-sm text-primary hover:underline">ลืมรหัสผ่าน?</a>
-              </Link>
-            </div>
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="pl-10"
-                required
-              />
-            </div>
-          </div>
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-full bg-secondary/20 flex items-center justify-center flex-shrink-0">
+                  <Zap className="w-5 h-5 text-secondary" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm mb-1">ใช้งานง่าย</h3>
+                  <p className="text-xs text-muted-foreground">
+                    เข้าสู่ระบบด้วย Manus Account
+                  </p>
+                </div>
+              </div>
 
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-full bg-accent/20 flex items-center justify-center flex-shrink-0">
+                  <TrendingUp className="w-5 h-5 text-accent" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm mb-1">โอกาสมากมาย</h3>
+                  <p className="text-xs text-muted-foreground">
+                    ซื้อ-ขาย สินค้าได้ทันที
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Login Button */}
+            <Button
+              onClick={handleLogin}
+              size="lg"
+              className="w-full btn-neon bg-primary hover:bg-primary/90 text-primary-foreground font-bold"
+            >
+              <LogIn className="w-5 h-5 mr-2" />
+              เข้าสู่ระบบด้วย Manus
+            </Button>
+
+            {/* Terms */}
+            <p className="text-xs text-center text-muted-foreground">
+              การเข้าสู่ระบบแสดงว่าคุณยอมรับ
+              <br />
+              <a href="/terms" className="text-primary hover:underline">
+                เงื่อนไขการใช้งาน
+              </a>
+              {" และ "}
+              <a href="/privacy" className="text-primary hover:underline">
+                นโยบายความเป็นส่วนตัว
+              </a>
+            </p>
+          </div>
+        </Card>
+
+        {/* Back to Home */}
+        <div className="text-center mt-6">
           <Button
-            type="submit"
-            className="w-full btn-glow gradient-red-orange"
-            size="lg"
-            disabled={isLoading}
+            variant="ghost"
+            onClick={() => setLocation("/")}
+            className="text-muted-foreground hover:text-foreground"
           >
-            {isLoading ? (
-              <>
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                กำลังเข้าสู่ระบบ...
-              </>
-            ) : (
-              "เข้าสู่ระบบ"
-            )}
+            ← กลับหน้าแรก
           </Button>
-        </form>
-
-        <div className="relative my-6">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-border"></div>
-          </div>
-          <div className="relative flex justify-center text-sm">
-            <span className="px-2 bg-background text-muted-foreground">หรือ</span>
-          </div>
         </div>
-
-        <Button
-          type="button"
-          variant="outline"
-          className="w-full"
-          size="lg"
-          onClick={handleGoogleLogin}
-          disabled={isLoading}
-        >
-          <Chrome className="w-5 h-5 mr-2" />
-          เข้าสู่ระบบด้วย Google
-        </Button>
-
-        <div className="mt-6 text-center text-sm">
-          <span className="text-muted-foreground">ยังไม่มีบัญชี? </span>
-          <Link href="/register">
-            <a className="text-primary hover:underline font-semibold">สมัครสมาชิก</a>
-          </Link>
-        </div>
-
-        <div className="mt-4 text-center">
-          <Link href="/">
-            <a className="text-sm text-muted-foreground hover:text-primary">
-              ← กลับหน้าหลัก
-            </a>
-          </Link>
-        </div>
-      </Card>
+      </div>
     </div>
   );
 }

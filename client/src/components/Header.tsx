@@ -1,7 +1,8 @@
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useSupabaseAuth } from "@/hooks/useSupabaseAuth";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { trpc } from "@/lib/trpc";
 import { APP_TITLE, APP_LOGO, getLoginUrl } from "@/const";
 import { Search, ShoppingCart, User, Heart, Package, LogOut, Settings } from "lucide-react";
 import {
@@ -15,7 +16,8 @@ import { useState } from "react";
 
 export default function Header() {
   const [location, setLocation] = useLocation();
-  const { user, isAuthenticated, logout } = useSupabaseAuth();
+  const { user, isAuthenticated } = useAuth();
+  const logoutMutation = trpc.auth.logout.useMutation();
   const [searchQuery, setSearchQuery] = useState("");
 
   const handleSearch = (e: React.FormEvent) => {
@@ -26,8 +28,8 @@ export default function Header() {
   };
 
   const handleLogout = async () => {
-    await logout();
-    setLocation("/");
+    await logoutMutation.mutateAsync();
+    window.location.href = "/";
   };
 
   return (
@@ -122,16 +124,20 @@ export default function Header() {
             </>
           ) : (
             <>
-              <Link href="/login">
-                <Button variant="ghost" size="sm">
-                  เข้าสู่ระบบ
-                </Button>
-              </Link>
-              <Link href="/register">
-                <Button className="btn-glow gradient-red-orange" size="sm">
-                  สมัครสมาชิก
-                </Button>
-              </Link>
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => window.location.href = getLoginUrl()}
+              >
+                เข้าสู่ระบบ
+              </Button>
+              <Button 
+                className="btn-neon bg-primary hover:bg-primary/90 text-primary-foreground" 
+                size="sm"
+                onClick={() => window.location.href = getLoginUrl()}
+              >
+                สมัครสมาชิก
+              </Button>
             </>
           )}
         </nav>

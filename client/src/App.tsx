@@ -18,6 +18,7 @@ import Register from "./pages/Register";
 import AuthCallback from "./pages/AuthCallback";
 import SellerRegister from "./pages/SellerRegister";
 import Chat from "./pages/Chat";
+import { ProtectedRoute } from "./components/ProtectedRoute";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -26,14 +27,46 @@ function Router() {
       <Route path={"/"} component={Home} />
       <Route path={"/products"} component={Products} />
       <Route path={"/product/:id"} component={ProductDetail} />
-      <Route path={"/cart"} component={Cart} />
-      <Route path={"/checkout"} component={Checkout} />
-      <Route path={"/seller/register"} component={SellerRegister} />
-      <Route path={"/seller/dashboard"} component={SellerDashboard} />
-      <Route path={"/admin/dashboard"} component={AdminDashboard} />
-      <Route path={"/profile"} component={Profile} />
-      <Route path={"/orders"} component={Orders} />
-      <Route path={"/chat"} component={Chat} />
+      <Route path={"/cart"}>
+        <ProtectedRoute>
+          <Cart />
+        </ProtectedRoute>
+      </Route>
+      <Route path={"/checkout"}>
+        <ProtectedRoute>
+          <Checkout />
+        </ProtectedRoute>
+      </Route>
+      <Route path={"/seller/register"}>
+        <ProtectedRoute>
+          <SellerRegister />
+        </ProtectedRoute>
+      </Route>
+      <Route path={"/seller/dashboard"}>
+        <ProtectedRoute requiredRole="seller">
+          <SellerDashboard />
+        </ProtectedRoute>
+      </Route>
+      <Route path={"/admin/dashboard"}>
+        <ProtectedRoute requiredRole="admin">
+          <AdminDashboard />
+        </ProtectedRoute>
+      </Route>
+      <Route path={"/profile"}>
+        <ProtectedRoute>
+          <Profile />
+        </ProtectedRoute>
+      </Route>
+      <Route path={"/orders"}>
+        <ProtectedRoute>
+          <Orders />
+        </ProtectedRoute>
+      </Route>
+      <Route path={"/chat"}>
+        <ProtectedRoute>
+          <Chat />
+        </ProtectedRoute>
+      </Route>
       <Route path={"/login"} component={Login} />
       <Route path={"/register"} component={Register} />
       <Route path={"/auth/callback"} component={AuthCallback} />
