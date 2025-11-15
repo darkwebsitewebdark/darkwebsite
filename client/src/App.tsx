@@ -17,6 +17,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import AuthCallback from "./pages/AuthCallback";
 import SellerRegister from "./pages/SellerRegister";
+import Chat from "./pages/Chat";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -32,6 +33,7 @@ function Router() {
       <Route path={"/admin/dashboard"} component={AdminDashboard} />
       <Route path={"/profile"} component={Profile} />
       <Route path={"/orders"} component={Orders} />
+      <Route path={"/chat"} component={Chat} />
       <Route path={"/login"} component={Login} />
       <Route path={"/register"} component={Register} />
       <Route path={"/auth/callback"} component={AuthCallback} />
