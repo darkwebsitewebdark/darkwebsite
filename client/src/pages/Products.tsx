@@ -90,12 +90,12 @@ export default function Products() {
               </div>
             </div>
 
-            <Select value={selectedCategory?.toString()} onValueChange={(v) => setSelectedCategory(v ? parseInt(v) : undefined)}>
+            <Select value={selectedCategory?.toString() || "all"} onValueChange={(v) => setSelectedCategory(v === "all" ? undefined : parseInt(v))}>
               <SelectTrigger>
                 <SelectValue placeholder="หมวดหมู่" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">ทั้งหมด</SelectItem>
+                <SelectItem value="all">ทั้งหมด</SelectItem>
                 {categories?.map((cat) => (
                   <SelectItem key={cat.id} value={cat.id.toString()}>
                     {cat.name}
