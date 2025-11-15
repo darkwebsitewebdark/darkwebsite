@@ -1,7 +1,19 @@
-import { getLoginUrl } from "@/const";
-import { trpc } from "@/lib/trpc";
-import { TRPCClientError } from "@trpc/client";
-import { useCallback, useEffect, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { supabase } from "@/lib/supabase";
+import type { User as SupabaseUser } from "@supabase/supabase-js";
+
+type DbUser = {
+  id: number;
+  auth_id: string;
+  email: string | null;
+  name: string | null;
+  phone: string | null;
+  profile_image: string | null;
+  role: 'user' | 'seller' | 'admin';
+  wallet_balance: number;
+  created_at: string;
+  last_signed_in: string;
+};
 
 type UseAuthOptions = {
   redirectOnUnauthenticated?: boolean;
@@ -9,76 +21,116 @@ type UseAuthOptions = {
 };
 
 export function useAuth(options?: UseAuthOptions) {
-  const { redirectOnUnauthenticated = false, redirectPath = getLoginUrl() } =
-    options ?? {};
-  const utils = trpc.useUtils();
+  const { redirectOnUnauthenticated = false, redirectPath = "/login" } = options ?? {};
+  
+  const [authUser, setAuthUser] = useState<SupabaseUser | null>(null);
+  const [dbUser, setDbUser] = useState<DbUser | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
 
-  const meQuery = trpc.auth.me.useQuery(undefined, {
-    retry: false,
-    refetchOnWindowFocus: false,
-  });
+  useEffect(() => {
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (error) {
+        console.error('Error getting session:', error);
+        setError(error);
+        setLoading(false);
+        return;
+      }
 
-  const logoutMutation = trpc.auth.logout.useMutation({
-    onSuccess: () => {
-      utils.auth.me.setData(undefined, null);
-    },
-  });
+      setAuthUser(session?.user ?? null);
+
+      if (session?.user) {
+        fetchDbUser(session.user.id);
+      } else {
+        setLoading(false);
+      }
+    });
+
+    // Listen for auth changes
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      setAuthUser(session?.user ?? null);
+
+      if (session?.user) {
+        await fetchDbUser(session.user.id);
+      } else {
+        setDbUser(null);
+        setLoading(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  async function fetchDbUser(authId: string) {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('auth_id', authId)
+        .single();
+
+      if (error) {
+        console.error('Error fetching user:', error);
+        setError(error);
+      } else {
+        setDbUser(data);
+      }
+    } catch (err) {
+      console.error('Error fetching user:', err);
+      setError(err as Error);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   const logout = useCallback(async () => {
     try {
-      await logoutMutation.mutateAsync();
-    } catch (error: unknown) {
-      if (
-        error instanceof TRPCClientError &&
-        error.data?.code === "UNAUTHORIZED"
-      ) {
-        return;
-      }
-      throw error;
-    } finally {
-      utils.auth.me.setData(undefined, null);
-      await utils.auth.me.invalidate();
+      await supabase.auth.signOut();
+      setAuthUser(null);
+      setDbUser(null);
+    } catch (err) {
+      console.error('Error signing out:', err);
+      setError(err as Error);
     }
-  }, [logoutMutation, utils]);
+  }, []);
+
+  const refresh = useCallback(async () => {
+    if (authUser) {
+      await fetchDbUser(authUser.id);
+    }
+  }, [authUser]);
 
   const state = useMemo(() => {
-    localStorage.setItem(
-      "manus-runtime-user-info",
-      JSON.stringify(meQuery.data)
-    );
     return {
-      user: meQuery.data ?? null,
-      loading: meQuery.isLoading || logoutMutation.isPending,
-      error: meQuery.error ?? logoutMutation.error ?? null,
-      isAuthenticated: Boolean(meQuery.data),
+      user: dbUser,
+      authUser,
+      loading,
+      error,
+      isAuthenticated: Boolean(authUser && dbUser),
     };
-  }, [
-    meQuery.data,
-    meQuery.error,
-    meQuery.isLoading,
-    logoutMutation.error,
-    logoutMutation.isPending,
-  ]);
+  }, [dbUser, authUser, loading, error]);
 
   useEffect(() => {
     if (!redirectOnUnauthenticated) return;
-    if (meQuery.isLoading || logoutMutation.isPending) return;
+    if (loading) return;
     if (state.user) return;
     if (typeof window === "undefined") return;
     if (window.location.pathname === redirectPath) return;
 
-    window.location.href = redirectPath
+    window.location.href = redirectPath;
   }, [
     redirectOnUnauthenticated,
     redirectPath,
-    logoutMutation.isPending,
-    meQuery.isLoading,
+    loading,
     state.user,
   ]);
 
   return {
     ...state,
-    refresh: () => meQuery.refetch(),
+    refresh,
     logout,
   };
 }

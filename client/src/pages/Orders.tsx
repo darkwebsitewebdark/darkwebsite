@@ -9,7 +9,7 @@ import { supabase } from "@/lib/supabase";
 import { Package, Truck, CheckCircle, XCircle, Clock, Eye } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { toast } from "sonner";
-import { getLoginUrl } from "@/const";
+
 
 type Order = {
   id: number;
@@ -100,7 +100,7 @@ export default function Orders() {
             <Button
               size="lg"
               className="btn-glow gradient-red-orange"
-              onClick={() => window.location.href = getLoginUrl()}
+              onClick={() => window.location.href = "/login"}
             >
               เข้าสู่ระบบ
             </Button>

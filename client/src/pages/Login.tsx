@@ -1,14 +1,21 @@
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { APP_LOGO, APP_TITLE, getLoginUrl } from "@/const";
-import { LogIn, ShieldCheck, Zap, TrendingUp } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { APP_LOGO, APP_TITLE } from "@/const";
+import { LogIn, ShieldCheck, Zap, TrendingUp, Mail } from "lucide-react";
 import { useLocation } from "wouter";
+import { supabase } from "@/lib/supabase";
+import { toast } from "sonner";
 
 export default function Login() {
   const { isAuthenticated, loading } = useAuth();
   const [, setLocation] = useLocation();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     // Redirect if already logged in
@@ -17,8 +24,77 @@ export default function Login() {
     }
   }, [loading, isAuthenticated, setLocation]);
 
-  const handleLogin = () => {
-    window.location.href = getLoginUrl();
+  const handleEmailLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+
+      if (data.user) {
+        // Check if user exists in database
+        const { data: dbUser, error: dbError } = await supabase
+          .from('users')
+          .select('*')
+          .eq('auth_id', data.user.id)
+          .single();
+
+        if (dbError || !dbUser) {
+          // Create user in database if doesn't exist
+          const { error: insertError } = await supabase
+            .from('users')
+            .insert({
+              auth_id: data.user.id,
+              email: data.user.email,
+              name: data.user.user_metadata?.name || null,
+              role: 'user',
+              wallet_balance: 0,
+            });
+
+          if (insertError) {
+            console.error('Error creating user:', insertError);
+          }
+        }
+
+        toast.success("เข้าสู่ระบบสำเร็จ!");
+        setLocation("/");
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      toast.error("เกิดข้อผิดพลาดในการเข้าสู่ระบบ");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    setIsLoading(true);
+
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+
+      if (error) {
+        toast.error(error.message);
+      }
+    } catch (error) {
+      console.error('Google login error:', error);
+      toast.error("เกิดข้อผิดพลาดในการเข้าสู่ระบบด้วย Google");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   if (loading) {
@@ -56,9 +132,96 @@ export default function Login() {
 
         {/* Login Card */}
         <Card className="card-neon p-8">
-          <div className="space-y-6">
+          <form onSubmit={handleEmailLogin} className="space-y-6">
+            {/* Email Input */}
+            <div className="space-y-2">
+              <Label htmlFor="email">อีเมล</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="your@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                disabled={isLoading}
+                className="input-dark"
+              />
+            </div>
+
+            {/* Password Input */}
+            <div className="space-y-2">
+              <Label htmlFor="password">รหัสผ่าน</Label>
+              <Input
+                id="password"
+                type="password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                disabled={isLoading}
+                className="input-dark"
+              />
+            </div>
+
+            {/* Forgot Password Link */}
+            <div className="text-right">
+              <a
+                href="/forgot-password"
+                className="text-sm text-primary hover:underline"
+              >
+                ลืมรหัสผ่าน?
+              </a>
+            </div>
+
+            {/* Login Button */}
+            <Button
+              type="submit"
+              size="lg"
+              disabled={isLoading}
+              className="w-full btn-neon bg-primary hover:bg-primary/90 text-primary-foreground font-bold"
+            >
+              <LogIn className="w-5 h-5 mr-2" />
+              {isLoading ? "กำลังเข้าสู่ระบบ..." : "เข้าสู่ระบบ"}
+            </Button>
+
+            {/* Divider */}
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t border-muted"></span>
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">
+                  หรือ
+                </span>
+              </div>
+            </div>
+
+            {/* Google Login Button */}
+            <Button
+              type="button"
+              onClick={handleGoogleLogin}
+              size="lg"
+              variant="outline"
+              disabled={isLoading}
+              className="w-full"
+            >
+              <Mail className="w-5 h-5 mr-2" />
+              เข้าสู่ระบบด้วย Google
+            </Button>
+
+            {/* Register Link */}
+            <div className="text-center text-sm">
+              <span className="text-muted-foreground">ยังไม่มีบัญชี? </span>
+              <a
+                href="/register"
+                className="text-primary hover:underline font-bold"
+              >
+                สมัครสมาชิก
+              </a>
+            </div>
+
             {/* Benefits */}
-            <div className="space-y-4">
+            <div className="space-y-4 mt-6 pt-6 border-t border-muted">
               <div className="flex items-start gap-3">
                 <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
                   <ShieldCheck className="w-5 h-5 text-primary" />
@@ -78,7 +241,7 @@ export default function Login() {
                 <div>
                   <h3 className="font-bold text-sm mb-1">ใช้งานง่าย</h3>
                   <p className="text-xs text-muted-foreground">
-                    เข้าสู่ระบบด้วย Manus Account
+                    เข้าสู่ระบบด้วย Email หรือ Google
                   </p>
                 </div>
               </div>
@@ -95,30 +258,7 @@ export default function Login() {
                 </div>
               </div>
             </div>
-
-            {/* Login Button */}
-            <Button
-              onClick={handleLogin}
-              size="lg"
-              className="w-full btn-neon bg-primary hover:bg-primary/90 text-primary-foreground font-bold"
-            >
-              <LogIn className="w-5 h-5 mr-2" />
-              เข้าสู่ระบบด้วย Manus
-            </Button>
-
-            {/* Terms */}
-            <p className="text-xs text-center text-muted-foreground">
-              การเข้าสู่ระบบแสดงว่าคุณยอมรับ
-              <br />
-              <a href="/terms" className="text-primary hover:underline">
-                เงื่อนไขการใช้งาน
-              </a>
-              {" และ "}
-              <a href="/privacy" className="text-primary hover:underline">
-                นโยบายความเป็นส่วนตัว
-              </a>
-            </p>
-          </div>
+          </form>
         </Card>
 
         {/* Back to Home */}

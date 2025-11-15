@@ -9,7 +9,7 @@ import { trpc } from "@/lib/trpc";
 import { Wallet, CreditCard, History, User, Settings, Package, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { ImageUploader } from "@/components/ImageUploader";
-import { getLoginUrl } from "@/const";
+
 import { useLocation, Link } from "wouter";
 
 export default function Profile() {
@@ -57,7 +57,7 @@ export default function Profile() {
           <Button
             size="lg"
             className="btn-glow gradient-red-orange"
-            onClick={() => window.location.href = getLoginUrl()}
+            onClick={() => window.location.href = "/login"}
           >
             เข้าสู่ระบบ
           </Button>

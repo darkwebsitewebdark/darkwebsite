@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
-import { APP_TITLE, APP_LOGO, getLoginUrl } from "@/const";
+import { APP_TITLE, APP_LOGO } from "@/const";
 import { Search, ShoppingCart, User, Heart, Package, LogOut, Settings } from "lucide-react";
 import {
   DropdownMenu,
@@ -16,8 +16,7 @@ import { useState } from "react";
 
 export default function Header() {
   const [location, setLocation] = useLocation();
-  const { user, isAuthenticated } = useAuth();
-  const logoutMutation = trpc.auth.logout.useMutation();
+  const { user, isAuthenticated, logout } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
 
   const handleSearch = (e: React.FormEvent) => {
@@ -28,7 +27,7 @@ export default function Header() {
   };
 
   const handleLogout = async () => {
-    await logoutMutation.mutateAsync();
+    await logout();
     window.location.href = "/";
   };
 
@@ -128,14 +127,14 @@ export default function Header() {
               <Button 
                 variant="ghost" 
                 size="sm"
-                onClick={() => window.location.href = getLoginUrl()}
+                onClick={() => setLocation("/login")}
               >
                 เข้าสู่ระบบ
               </Button>
               <Button 
                 className="btn-neon bg-primary hover:bg-primary/90 text-primary-foreground" 
                 size="sm"
-                onClick={() => window.location.href = getLoginUrl()}
+                onClick={() => setLocation("/register")}
               >
                 สมัครสมาชิก
               </Button>
