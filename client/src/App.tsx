@@ -14,6 +14,9 @@ import Checkout from "./pages/Checkout";
 import SellerDashboard from "./pages/SellerDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import Profile from "./pages/Profile";
+import Chat from "./pages/Chat";
+import Notifications from "./pages/Notifications";
+import Orders from "./pages/Orders";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -28,6 +31,9 @@ function Router() {
       <Route path={"/seller/dashboard"} component={SellerDashboard} />
       <Route path={"/admin/dashboard"} component={AdminDashboard} />
       <Route path={"/profile"} component={Profile} />
+      <Route path={"/chat/:conversationId?"} component={Chat} />
+      <Route path={"/notifications"} component={Notifications} />
+      <Route path={"/orders/:id?"} component={Orders} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />
