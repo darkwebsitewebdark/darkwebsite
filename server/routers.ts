@@ -166,13 +166,26 @@ export const appRouter = router({
   // ============= CATEGORIES =============
   categories: router({
     list: publicProcedure.query(async () => {
-      return db.getCategories();
+      const { data, error } = await supabaseAdmin
+        .from('categories')
+        .select('*')
+        .order('name');
+      
+      if (error) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+      return data || [];
     }),
 
     get: publicProcedure
       .input(z.object({ id: z.number() }))
       .query(async ({ input }) => {
-        return db.getCategoryById(input.id);
+        const { data, error } = await supabaseAdmin
+          .from('categories')
+          .select('*')
+          .eq('id', input.id)
+          .single();
+        
+        if (error) throw new TRPCError({ code: 'NOT_FOUND', message: 'Category not found' });
+        return data;
       }),
 
     create: adminProcedure
@@ -209,21 +222,68 @@ export const appRouter = router({
   products: router({
     list: publicProcedure
       .input(z.object({
-        categoryId: z.number().optional(),
-        sellerId: z.number().optional(),
+        category_id: z.number().optional(),
+        seller_id: z.number().optional(),
         search: z.string().optional(),
         status: z.string().optional(),
-        limit: z.number().optional().default(20),
+        sort_by: z.enum(['newest', 'popular', 'price_asc', 'price_desc']).optional().default('newest'),
+        limit: z.number().optional().default(50),
         offset: z.number().optional().default(0),
       }))
       .query(async ({ input }) => {
-        return db.getProducts(input);
+        let query = supabaseAdmin
+          .from('products')
+          .select('*, categories(name)')
+          .eq('status', input.status || 'active');
+
+        if (input.category_id) {
+          query = query.eq('category_id', input.category_id);
+        }
+
+        if (input.seller_id) {
+          query = query.eq('seller_id', input.seller_id);
+        }
+
+        if (input.search) {
+          query = query.or(`name.ilike.%${input.search}%,description.ilike.%${input.search}%`);
+        }
+
+        // Sorting
+        if (input.sort_by === 'newest') {
+          query = query.order('created_at', { ascending: false });
+        } else if (input.sort_by === 'popular') {
+          query = query.order('sales', { ascending: false });
+        } else if (input.sort_by === 'price_asc') {
+          query = query.order('price', { ascending: true });
+        } else if (input.sort_by === 'price_desc') {
+          query = query.order('price', { ascending: false });
+        }
+
+        query = query.range(input.offset, input.offset + input.limit - 1);
+
+        const { data, error } = await query;
+
+        if (error) {
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: error.message });
+        }
+
+        return data || [];
       }),
 
     get: publicProcedure
       .input(z.object({ id: z.number() }))
       .query(async ({ input }) => {
-        return db.getProductById(input.id);
+        const { data, error } = await supabaseAdmin
+          .from('products')
+          .select('*, categories(name), users!seller_id(name)')
+          .eq('id', input.id)
+          .single();
+
+        if (error) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Product not found' });
+        }
+
+        return data;
       }),
 
     create: sellerProcedure

@@ -52,83 +52,50 @@ export default function Products() {
     }
   }, [location]);
 
-  // Fetch categories
-  useEffect(() => {
-    async function fetchCategories() {
-      const { data } = await supabase
-        .from('categories')
-        .select('*')
-        .order('name');
+  // Fetch categories using tRPC
+  const { data: categoriesData } = trpc.categories.list.useQuery();
 
-      if (data) {
-        setCategories(data);
-      }
+  useEffect(() => {
+    if (categoriesData) {
+      setCategories(categoriesData as any);
     }
+  }, [categoriesData]);
 
-    fetchCategories();
-  }, []);
+  // Fetch products using tRPC
+  const sortByMap: Record<string, "newest" | "popular" | "price_asc" | "price_desc"> = {
+    newest: 'newest',
+    popular: 'popular',
+    price_low: 'price_asc',
+    price_high: 'price_desc',
+  };
 
-  // Fetch products
+  const { data: productsData, isLoading: productsLoading, error: productsError } = trpc.products.list.useQuery({
+    category_id: selectedCategory && selectedCategory !== 'all' ? parseInt(selectedCategory) : undefined,
+    search: searchQuery || undefined,
+    sort_by: sortByMap[sortBy] || 'newest',
+    status: 'active',
+    limit: 50,
+    offset: 0,
+  });
+
   useEffect(() => {
-    async function fetchProducts() {
-      setIsLoading(true);
-
-      let query = supabase
-        .from('products')
-        .select('*')
-        .eq('status', 'active');
-
-      // Apply filters
-      if (searchQuery) {
-        query = query.or(`name.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`);
-      }
-
-      if (selectedCategory && selectedCategory !== 'all') {
-        query = query.eq('category_id', parseInt(selectedCategory));
-      }
-
-      // Apply sorting
-      switch (sortBy) {
-        case 'newest':
-          query = query.order('created_at', { ascending: false });
-          break;
-        case 'price_low':
-          query = query.order('price', { ascending: true });
-          break;
-        case 'price_high':
-          query = query.order('price', { ascending: false });
-          break;
-        case 'popular':
-          query = query.order('sales', { ascending: false });
-          break;
-        default:
-          query = query.order('created_at', { ascending: false });
-      }
-
-      query = query.limit(50);
-
-      const { data, error } = await query;
-
-      console.log('[Products] Fetch result:', { data, error, count: data?.length });
-
-      if (error) {
-        console.error('[Products] Fetch error:', error);
-        toast.error(`เกิดข้อผิดพลาด: ${error.message}`);
-      }
-
-      if (data) {
-        setProducts(data);
-      }
-
+    if (productsData) {
+      setProducts(productsData as any);
       setIsLoading(false);
     }
+    if (productsError) {
+      toast.error(`เกิดข้อผิดพลาด: ${productsError.message}`);
+      setIsLoading(false);
+    }
+  }, [productsData, productsError]);
 
-    fetchProducts();
-  }, [searchQuery, selectedCategory, sortBy]);
+  useEffect(() => {
+    setIsLoading(productsLoading);
+  }, [productsLoading]);
 
   const addToCartMutation = trpc.cart.add.useMutation({
-    onSuccess: (data) => {
-      toast.success(data.message);
+    onSuccess: () => {
+      toast.success("เพิ่มสินค้าลงตะกร้าแล้ว");
     },
     onError: (error) => {
       toast.error(error.message || 'เกิดข้อผิดพลาด');
@@ -141,7 +108,7 @@ export default function Products() {
       return;
     }
 
-    addToCartMutation.mutate({ productId, quantity: 1 });
+    addToCartMutation.mutate({ productId: productId, quantity: 1 });
   };
 
   const handleAddToWishlist = async (productId: number) => {
