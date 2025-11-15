@@ -38,10 +38,11 @@ export default function Header() {
         {/* Logo */}
         <Link href="/">
           <div className="flex items-center gap-2 cursor-pointer">
-            {APP_LOGO && (
-              <img src={APP_LOGO} alt={APP_TITLE} className="h-8 w-8" />
-            )}
-            <span className="text-xl font-bold">{APP_TITLE}</span>
+            <img 
+              src="/logo-dlnk-horizontal.png" 
+              alt="dLNk Dark Shop" 
+              className="h-10 w-auto" 
+            />
           </div>
         </Link>
 

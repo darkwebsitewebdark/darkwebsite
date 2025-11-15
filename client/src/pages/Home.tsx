@@ -281,7 +281,7 @@ export default function Home() {
                       {/* Price */}
                       <div className="flex items-baseline gap-2 mb-2">
                         <span className="price-tag text-primary">
-                          ฿{product.price.toLocaleString()}
+                          ฿{(product.price / 100).toLocaleString('th-TH', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                         </span>
                       </div>
 
