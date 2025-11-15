@@ -1,21 +1,31 @@
 export { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
 
-export const APP_TITLE = import.meta.env.VITE_APP_TITLE || "StreetMarket";
+export const APP_TITLE = import.meta.env.VITE_APP_TITLE || "dLNk Dark Shop";
 
-export const APP_LOGO = "https://placehold.co/128x128/141414/FF3B3B?text=SM";
+export const APP_LOGO = "/logo-dlnk.png";
 
 // Generate login URL at runtime so redirect URI reflects the current origin.
 export const getLoginUrl = () => {
-  const oauthPortalUrl = import.meta.env.VITE_OAUTH_PORTAL_URL;
-  const appId = import.meta.env.VITE_APP_ID;
+  const oauthPortalUrl = import.meta.env.VITE_OAUTH_PORTAL_URL || "https://oauth.manus.im";
+  const appId = import.meta.env.VITE_APP_ID || "";
+  
+  // If OAuth is not configured, return login page
+  if (!appId || !oauthPortalUrl) {
+    return "/login";
+  }
+  
   const redirectUri = `${window.location.origin}/api/oauth/callback`;
   const state = btoa(redirectUri);
 
-  const url = new URL(`${oauthPortalUrl}/app-auth`);
-  url.searchParams.set("appId", appId);
-  url.searchParams.set("redirectUri", redirectUri);
-  url.searchParams.set("state", state);
-  url.searchParams.set("type", "signIn");
-
-  return url.toString();
+  try {
+    const url = new URL(`${oauthPortalUrl}/app-auth`);
+    url.searchParams.set("appId", appId);
+    url.searchParams.set("redirectUri", redirectUri);
+    url.searchParams.set("state", state);
+    url.searchParams.set("type", "signIn");
+    return url.toString();
+  } catch (error) {
+    console.error("Failed to generate login URL:", error);
+    return "/login";
+  }
 };
