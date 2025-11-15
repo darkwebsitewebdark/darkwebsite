@@ -14,7 +14,7 @@ import Checkout from "./pages/Checkout";
 import SellerDashboard from "./pages/SellerDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import Profile from "./pages/Profile";
-import Chat from "./pages/Chat";
+import ChatRealtime from "./pages/ChatRealtime";
 import Notifications from "./pages/Notifications";
 import Orders from "./pages/Orders";
 import Wishlist from "./pages/Wishlist";
@@ -35,7 +35,7 @@ function Router() {
       <Route path={"/seller/dashboard"} component={SellerDashboard} />
       <Route path={"/admin/dashboard"} component={AdminDashboard} />
       <Route path={"/profile"} component={Profile} />
-      <Route path={"/chat/:conversationId?"} component={Chat} />
+      <Route path={"/chat/:conversationId?"} component={ChatRealtime} />
       <Route path={"/notifications"} component={Notifications} />
       <Route path={"/orders/:id?"} component={Orders} />
       <Route path={"/wishlist"} component={Wishlist} />
