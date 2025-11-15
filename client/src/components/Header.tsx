@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useAuth } from "@/_core/hooks/useAuth";
+import { useSupabaseAuth } from "@/hooks/useSupabaseAuth";
 import { APP_TITLE, APP_LOGO, getLoginUrl } from "@/const";
 import { Search, ShoppingCart, User, Heart, Package, LogOut, Settings } from "lucide-react";
 import {
@@ -15,7 +15,7 @@ import { useState } from "react";
 
 export default function Header() {
   const [location, setLocation] = useLocation();
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, isAuthenticated, logout } = useSupabaseAuth();
   const [searchQuery, setSearchQuery] = useState("");
 
   const handleSearch = (e: React.FormEvent) => {
@@ -121,12 +121,18 @@ export default function Header() {
               </DropdownMenu>
             </>
           ) : (
-            <Button
-              onClick={() => window.location.href = getLoginUrl()}
-              className="btn-glow gradient-red-orange"
-            >
-              เข้าสู่ระบบ
-            </Button>
+            <>
+              <Link href="/login">
+                <Button variant="ghost" size="sm">
+                  เข้าสู่ระบบ
+                </Button>
+              </Link>
+              <Link href="/register">
+                <Button className="btn-glow gradient-red-orange" size="sm">
+                  สมัครสมาชิก
+                </Button>
+              </Link>
+            </>
           )}
         </nav>
       </div>
