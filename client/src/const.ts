@@ -2,7 +2,7 @@ export { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
 
 export const APP_TITLE = import.meta.env.VITE_APP_TITLE || "dLNk Dark Shop";
 
-export const APP_LOGO = "/logo-dlnk.png";
+export const APP_LOGO = "/logo-dlnk-main.png";
 
 // Generate login URL at runtime so redirect URI reflects the current origin.
 export const getLoginUrl = () => {

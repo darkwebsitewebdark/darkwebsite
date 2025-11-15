@@ -1,16 +1,19 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import Header from "@/components/Header";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { supabase } from "@/lib/supabase";
+import { APP_LOGO, APP_TITLE } from "@/const";
 import { 
   ShoppingBag, 
   TrendingUp, 
   Shield, 
   Zap, 
   ArrowRight,
-  Star
+  Star,
+  Flame,
+  Sparkles
 } from "lucide-react";
 import { Link } from "wouter";
 
@@ -71,30 +74,48 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background relative crt-effect">
       <Header />
 
-      {/* Hero Section */}
-      <section className="relative py-20 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-background to-secondary/20"></div>
+      {/* Hero Section - Hardcore Dark Style */}
+      <section className="relative py-20 md:py-32 overflow-hidden crt-scan">
+        {/* Background effects */}
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-background to-secondary/10"></div>
+        <div className="absolute inset-0 spray-texture"></div>
+        
         <div className="container relative z-10">
-          <div className="max-w-3xl mx-auto text-center">
-            <h1 className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-              ยินดีต้อนรับสู่ StreetMarket
+          <div className="max-w-4xl mx-auto text-center">
+            {/* Logo */}
+            <div className="mb-8 animate-float">
+              <img 
+                src={APP_LOGO} 
+                alt={APP_TITLE}
+                className="w-64 md:w-96 mx-auto"
+              />
+            </div>
+            
+            {/* Tagline with neon effect */}
+            <h1 className="text-4xl md:text-6xl font-bold mb-6 neon-text-red animate-glow">
+              ยินดีต้อนรับสู่ใต้ดิน
             </h1>
-            <p className="text-xl text-muted-foreground mb-8">
-              แพลตฟอร์ม E-commerce ที่ดีที่สุดสำหรับผู้ซื้อและผู้ขาย
+            <p className="text-xl md:text-2xl text-foreground/80 mb-4 font-semibold">
+              แพลตฟอร์ม E-commerce สไตล์สตรีท
             </p>
-            <div className="flex gap-4 justify-center">
+            <p className="text-lg text-muted-foreground mb-12">
+              ซื้อ-ขาย สินค้าแท้ ราคาถูก ปลอดภัย 100%
+            </p>
+            
+            {/* CTA Buttons */}
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link href="/products">
-                <Button size="lg" className="btn-glow gradient-red-orange">
+                <Button size="lg" className="btn-neon bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-lg px-8">
                   <ShoppingBag className="w-5 h-5 mr-2" />
                   เริ่มช้อปปิ้ง
                 </Button>
               </Link>
               {!isAuthenticated && (
                 <Link href="/seller/register">
-                  <Button size="lg" variant="outline">
+                  <Button size="lg" variant="outline" className="btn-neon border-secondary text-secondary hover:bg-secondary/10 font-bold text-lg px-8">
                     เริ่มขายสินค้า
                     <ArrowRight className="w-5 h-5 ml-2" />
                   </Button>
@@ -105,80 +126,102 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Features */}
-      <section className="py-16 border-y border-border">
+      {/* Features Section - Street Style */}
+      <section className="py-16 bg-card/50">
         <div className="container">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <Card className="p-6 text-center">
-              <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-4">
-                <Shield className="w-6 h-6 text-primary" />
+            {/* Feature 1 */}
+            <Card className="card-neon p-6 text-center">
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-primary/20 flex items-center justify-center">
+                <Shield className="w-8 h-8 text-primary" />
               </div>
-              <h3 className="text-xl font-bold mb-2">ปลอดภัย 100%</h3>
+              <h3 className="text-xl font-bold mb-2 neon-text-red">ปลอดภัย 100%</h3>
               <p className="text-muted-foreground">
-                ระบบชำระเงินที่ปลอดภัย พร้อมการันตีคืนเงิน
+                ระบบรักษาความปลอดภัยระดับสูง พร้อมการันตีสินค้าแท้
               </p>
             </Card>
 
-            <Card className="p-6 text-center">
-              <div className="w-12 h-12 rounded-full bg-secondary/20 flex items-center justify-center mx-auto mb-4">
-                <Zap className="w-6 h-6 text-secondary" />
+            {/* Feature 2 */}
+            <Card className="card-neon p-6 text-center">
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-secondary/20 flex items-center justify-center">
+                <Zap className="w-8 h-8 text-secondary" />
               </div>
-              <h3 className="text-xl font-bold mb-2">จัดส่งรวดเร็ว</h3>
+              <h3 className="text-xl font-bold mb-2 neon-text-green">จัดส่งเร็ว</h3>
               <p className="text-muted-foreground">
-                จัดส่งฟรีสำหรับคำสั่งซื้อมากกว่า ฿500
+                จัดส่งด่วนทั่วประเทศ ติดตามพัสดุแบบ Real-time
               </p>
             </Card>
 
-            <Card className="p-6 text-center">
-              <div className="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center mx-auto mb-4">
-                <TrendingUp className="w-6 h-6 text-green-500" />
+            {/* Feature 3 */}
+            <Card className="card-neon p-6 text-center">
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-accent/20 flex items-center justify-center">
+                <TrendingUp className="w-8 h-8 text-accent" />
               </div>
-              <h3 className="text-xl font-bold mb-2">สินค้าคุณภาพ</h3>
+              <h3 className="text-xl font-bold mb-2 neon-text-orange">ราคาดี</h3>
               <p className="text-muted-foreground">
-                สินค้าคัดสรรจากผู้ขายที่ผ่านการตรวจสอบ
+                ราคาถูกกว่าห้าง ของแท้ 100% มีรีวิวจากผู้ซื้อจริง
               </p>
             </Card>
           </div>
         </div>
       </section>
 
-      {/* Categories */}
-      {categories.length > 0 && (
-        <section className="py-16">
-          <div className="container">
-            <div className="flex items-center justify-between mb-8">
-              <h2 className="text-3xl font-bold">หมวดหมู่สินค้า</h2>
-              <Link href="/categories">
-                <Button variant="ghost">
-                  ดูทั้งหมด
-                  <ArrowRight className="w-4 h-4 ml-2" />
-                </Button>
-              </Link>
-            </div>
+      {/* Categories Section */}
+      <section className="py-16">
+        <div className="container">
+          <div className="flex items-center justify-between mb-8">
+            <h2 className="text-3xl md:text-4xl font-bold neon-text-red">
+              หมวดหมู่สินค้า
+            </h2>
+            <Link href="/products">
+              <Button variant="ghost" className="text-primary hover:text-primary/80">
+                ดูทั้งหมด
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
+            </Link>
+          </div>
 
+          {isLoading ? (
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-              {categories.slice(0, 10).map((category) => (
+              {[...Array(10)].map((_, i) => (
+                <Card key={i} className="p-6 animate-pulse">
+                  <div className="w-12 h-12 bg-muted rounded-full mx-auto mb-3"></div>
+                  <div className="h-4 bg-muted rounded"></div>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              {categories.map((category) => (
                 <Link key={category.id} href={`/products?category=${category.id}`}>
-                  <Card className="p-4 text-center hover:border-primary transition-colors cursor-pointer">
-                    <div className="w-16 h-16 rounded-full bg-muted mx-auto mb-3 overflow-hidden flex items-center justify-center">
-                      <ShoppingBag className="w-8 h-8 text-muted-foreground" />
+                  <Card className="card-neon p-6 text-center hover:scale-105 transition-transform cursor-pointer">
+                    <div className="w-12 h-12 mx-auto mb-3 text-4xl">
+                      {category.icon || '📦'}
                     </div>
-                    <h3 className="font-semibold text-sm">{category.name}</h3>
+                    <h3 className="font-bold text-sm">{category.name}</h3>
                   </Card>
                 </Link>
               ))}
             </div>
-          </div>
-        </section>
-      )}
+          )}
+        </div>
+      </section>
 
-      {/* Featured Products */}
-      <section className="py-16 bg-muted/30">
+      {/* Featured Products Section */}
+      <section className="py-16 bg-card/30">
         <div className="container">
           <div className="flex items-center justify-between mb-8">
-            <h2 className="text-3xl font-bold">สินค้าแนะนำ</h2>
+            <div>
+              <h2 className="text-3xl md:text-4xl font-bold neon-text-red mb-2">
+                สินค้าแนะนำ
+              </h2>
+              <p className="text-muted-foreground flex items-center gap-2">
+                <Flame className="w-5 h-5 text-primary" />
+                สินค้าขายดีประจำสัปดาห์
+              </p>
+            </div>
             <Link href="/products">
-              <Button variant="ghost">
+              <Button variant="ghost" className="text-primary hover:text-primary/80">
                 ดูทั้งหมด
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
@@ -188,7 +231,7 @@ export default function Home() {
           {isLoading ? (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
               {[...Array(8)].map((_, i) => (
-                <Card key={i} className="overflow-hidden animate-pulse">
+                <Card key={i} className="animate-pulse">
                   <div className="aspect-square bg-muted"></div>
                   <div className="p-4 space-y-2">
                     <div className="h-4 bg-muted rounded"></div>
@@ -197,38 +240,59 @@ export default function Home() {
                 </Card>
               ))}
             </div>
+          ) : featuredProducts.length === 0 ? (
+            <Card className="p-12 text-center">
+              <p className="text-muted-foreground">ไม่พบสินค้า</p>
+            </Card>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
               {featuredProducts.map((product) => (
                 <Link key={product.id} href={`/product/${product.id}`}>
-                  <Card className="overflow-hidden hover:border-primary transition-all hover:shadow-lg cursor-pointer">
-                    <div className="aspect-square bg-muted overflow-hidden">
-                      {product.images?.[0] ? (
+                  <Card className="card-neon overflow-hidden group">
+                    {/* Product Image */}
+                    <div className="aspect-square relative overflow-hidden bg-muted">
+                      {product.images && product.images.length > 0 ? (
                         <img
                           src={product.images[0]}
                           alt={product.name}
-                          className="w-full h-full object-cover hover:scale-110 transition-transform"
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <ShoppingBag className="w-12 h-12 text-muted-foreground" />
+                        <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                          <ShoppingBag className="w-12 h-12" />
+                        </div>
+                      )}
+                      
+                      {/* Hot Badge */}
+                      {product.sales > 50 && (
+                        <div className="absolute top-2 right-2 badge-street badge-pulse bg-primary text-primary-foreground border-primary">
+                          <Flame className="w-3 h-3 mr-1" />
+                          ขายดี
                         </div>
                       )}
                     </div>
+
+                    {/* Product Info */}
                     <div className="p-4">
-                      <h3 className="font-semibold mb-2 line-clamp-2">{product.name}</h3>
-                      <div className="flex items-center justify-between mb-2">
-                        <p className="text-2xl font-bold text-primary">
-                          ฿{(product.price / 100).toFixed(2)}
-                        </p>
-                        <div className="flex items-center gap-1">
-                          <Star className="w-4 h-4 fill-yellow-500 text-yellow-500" />
-                          <span className="text-sm text-muted-foreground">4.5</span>
-                        </div>
+                      <h3 className="font-bold text-sm mb-2 truncate-2 min-h-[2.5rem]">
+                        {product.name}
+                      </h3>
+                      
+                      {/* Price */}
+                      <div className="flex items-baseline gap-2 mb-2">
+                        <span className="price-tag text-primary">
+                          ฿{product.price.toLocaleString()}
+                        </span>
                       </div>
-                      <p className="text-xs text-muted-foreground">
-                        ขายแล้ว {product.sales || 0}
-                      </p>
+
+                      {/* Rating & Sales */}
+                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <div className="flex items-center gap-1">
+                          <Star className="w-3 h-3 fill-yellow-500 text-yellow-500" />
+                          <span>4.5</span>
+                        </div>
+                        <span>ขายแล้ว {product.sales || 0}</span>
+                      </div>
                     </div>
                   </Card>
                 </Link>
@@ -239,68 +303,81 @@ export default function Home() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20">
-        <div className="container">
-          <Card className="p-12 text-center bg-gradient-to-br from-primary/10 to-secondary/10">
-            <h2 className="text-4xl font-bold mb-4">พร้อมเริ่มต้นแล้วหรือยัง?</h2>
-            <p className="text-xl text-muted-foreground mb-8">
-              เข้าร่วมกับผู้ซื้อและผู้ขายหลายพันคนบน StreetMarket
-            </p>
-            <div className="flex gap-4 justify-center">
-              <Link href="/products">
-                <Button size="lg" className="btn-glow gradient-red-orange">
-                  เริ่มช้อปปิ้ง
+      <section className="py-20 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-secondary/20"></div>
+        <div className="absolute inset-0 spray-texture"></div>
+        
+        <div className="container relative z-10 text-center">
+          <h2 className="text-3xl md:text-5xl font-bold mb-6 neon-text-red">
+            พร้อมเริ่มต้นแล้วหรือยัง?
+          </h2>
+          <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
+            เข้าร่วมกับผู้ซื้อและผู้ขายนับพันคนบน {APP_TITLE}
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link href="/products">
+              <Button size="lg" className="btn-neon bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-lg px-8">
+                <Sparkles className="w-5 h-5 mr-2" />
+                เริ่มช้อปปิ้งเลย
+              </Button>
+            </Link>
+            {!isAuthenticated && (
+              <Link href="/seller/register">
+                <Button size="lg" variant="outline" className="btn-neon border-secondary text-secondary hover:bg-secondary/10 font-bold text-lg px-8">
+                  สมัครเป็นผู้ขาย
+                  <ArrowRight className="w-5 h-5 ml-2" />
                 </Button>
               </Link>
-              {!isAuthenticated && (
-                <Link href="/seller/register">
-                  <Button size="lg" variant="outline">
-                    สมัครเป็นผู้ขาย
-                  </Button>
-                </Link>
-              )}
-            </div>
-          </Card>
+            )}
+          </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-border py-12">
+      <footer className="bg-card/50 py-12 border-t border-border">
         <div className="container">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+            {/* About */}
             <div>
-              <h3 className="font-bold text-lg mb-4">เกี่ยวกับเรา</h3>
+              <h3 className="font-bold text-lg mb-4 neon-text-red">เกี่ยวกับเรา</h3>
               <p className="text-sm text-muted-foreground">
-                StreetMarket คือแพลตฟอร์ม E-commerce ที่เชื่อมต่อผู้ซื้อและผู้ขายเข้าด้วยกัน
+                {APP_TITLE} แพลตฟอร์ม E-commerce สไตล์สตรีท ที่ดีที่สุดสำหรับผู้ซื้อและผู้ขาย
               </p>
             </div>
+
+            {/* Links */}
             <div>
               <h3 className="font-bold text-lg mb-4">ลิงก์ด่วน</h3>
-              <ul className="space-y-2 text-sm">
-                <li><Link href="/products"><a className="text-muted-foreground hover:text-primary">สินค้าทั้งหมด</a></Link></li>
-                <li><Link href="/categories"><a className="text-muted-foreground hover:text-primary">หมวดหมู่</a></Link></li>
-                <li><Link href="/seller/register"><a className="text-muted-foreground hover:text-primary">เริ่มขายสินค้า</a></Link></li>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li><Link href="/products" className="hover:text-primary">สินค้าทั้งหมด</Link></li>
+                <li><Link href="/seller/register" className="hover:text-primary">เริ่มขายสินค้า</Link></li>
+                <li><Link href="/about" className="hover:text-primary">เกี่ยวกับเรา</Link></li>
               </ul>
             </div>
+
+            {/* Support */}
             <div>
               <h3 className="font-bold text-lg mb-4">ช่วยเหลือ</h3>
-              <ul className="space-y-2 text-sm">
-                <li><a href="#" className="text-muted-foreground hover:text-primary">วิธีการสั่งซื้อ</a></li>
-                <li><a href="#" className="text-muted-foreground hover:text-primary">การจัดส่ง</a></li>
-                <li><a href="#" className="text-muted-foreground hover:text-primary">การคืนสินค้า</a></li>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li><Link href="/help" className="hover:text-primary">ศูนย์ช่วยเหลือ</Link></li>
+                <li><Link href="/contact" className="hover:text-primary">ติดต่อเรา</Link></li>
+                <li><Link href="/terms" className="hover:text-primary">เงื่อนไขการใช้งาน</Link></li>
               </ul>
             </div>
+
+            {/* Contact */}
             <div>
               <h3 className="font-bold text-lg mb-4">ติดต่อเรา</h3>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li>Email: support@streetmarket.com</li>
-                <li>Tel: 02-xxx-xxxx</li>
-                <li>Line: @streetmarket</li>
+                <li>Tel: 02-XXX-XXXX</li>
+                <li>LINE: @streetmarket</li>
               </ul>
             </div>
           </div>
-          <div className="border-t border-border mt-8 pt-8 text-center text-sm text-muted-foreground">
-            <p>&copy; 2024 StreetMarket. All rights reserved.</p>
+
+          <div className="mt-12 pt-8 border-t border-border text-center text-sm text-muted-foreground">
+            <p>&copy; 2024 {APP_TITLE}. All rights reserved.</p>
           </div>
         </div>
       </footer>

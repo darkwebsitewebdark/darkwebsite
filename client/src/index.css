@@ -337,6 +337,214 @@
   }
 }
 
+/* CRT Scan Lines Effect */
+@keyframes scan {
+  0% {
+    transform: translateY(-100%);
+  }
+  100% {
+    transform: translateY(100%);
+  }
+}
+
+.crt-effect::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    to bottom,
+    transparent 50%,
+    oklch(0 0 0 / 0.05) 50%
+  );
+  background-size: 100% 4px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.crt-scan::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: oklch(var(--primary) / 0.3);
+  animation: scan 8s linear infinite;
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Graffiti text style */
+.graffiti-text {
+  font-family: 'Permanent Marker', cursive;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  transform: rotate(-2deg);
+}
+
+/* Drip effect */
+.drip-effect {
+  position: relative;
+}
+
+.drip-effect::after {
+  content: '';
+  position: absolute;
+  bottom: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 2px;
+  height: 10px;
+  background: currentColor;
+  opacity: 0.6;
+}
+
+/* Spray paint texture */
+.spray-texture {
+  position: relative;
+  overflow: hidden;
+}
+
+.spray-texture::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: 
+    radial-gradient(circle at 20% 30%, oklch(1 0 0 / 0.05) 1px, transparent 1px),
+    radial-gradient(circle at 80% 70%, oklch(1 0 0 / 0.05) 1px, transparent 1px),
+    radial-gradient(circle at 40% 60%, oklch(1 0 0 / 0.03) 1px, transparent 1px);
+  background-size: 50px 50px, 60px 60px, 40px 40px;
+  pointer-events: none;
+}
+
+/* Enhanced button styles */
+.btn-neon {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.btn-neon::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    oklch(1 0 0 / 0.3),
+    transparent
+  );
+  transition: left 0.5s ease;
+}
+
+.btn-neon:hover::before {
+  left: 100%;
+}
+
+.btn-neon:hover {
+  transform: translateY(-2px);
+  box-shadow: 
+    0 0 20px oklch(var(--primary)),
+    0 0 40px oklch(var(--primary) / 0.5),
+    0 10px 30px oklch(0 0 0 / 0.5);
+}
+
+/* Enhanced card hover */
+.card-neon {
+  position: relative;
+  transition: all 0.3s ease;
+  border: 2px solid oklch(var(--border));
+}
+
+.card-neon::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    oklch(var(--primary) / 0.2),
+    transparent
+  );
+  transition: left 0.5s ease;
+}
+
+.card-neon:hover::before {
+  left: 100%;
+}
+
+.card-neon:hover {
+  border-color: oklch(var(--primary));
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 
+    0 0 30px oklch(var(--primary) / 0.3),
+    0 20px 40px oklch(0 0 0 / 0.5);
+}
+
+/* Pulsing badge */
+.badge-pulse {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 10px oklch(var(--primary));
+  }
+  50% {
+    box-shadow: 0 0 20px oklch(var(--primary)), 0 0 30px oklch(var(--primary) / 0.5);
+  }
+}
+
+/* Glitch effect */
+.glitch {
+  position: relative;
+}
+
+.glitch::before,
+.glitch::after {
+  content: attr(data-text);
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.glitch::before {
+  left: 2px;
+  text-shadow: -2px 0 oklch(var(--primary));
+  clip: rect(24px, 550px, 90px, 0);
+  animation: glitch-anim 3s infinite linear alternate-reverse;
+}
+
+.glitch::after {
+  left: -2px;
+  text-shadow: -2px 0 oklch(var(--secondary));
+  clip: rect(85px, 550px, 140px, 0);
+  animation: glitch-anim 2s infinite linear alternate-reverse;
+}
+
+@keyframes glitch-anim {
+  0% {
+    clip: rect(random(100) + px, 9999px, random(100) + px, 0);
+  }
+  100% {
+    clip: rect(random(100) + px, 9999px, random(100) + px, 0);
+  }
+}
+
 /* Animations */
 @keyframes glow {
   0%, 100% {
@@ -349,6 +557,32 @@
 
 .animate-glow {
   animation: glow 2s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes flicker {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+.animate-flicker {
+  animation: flicker 0.15s infinite;
 }
 
 /* Mobile optimizations */
