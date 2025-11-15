@@ -1,5 +1,4 @@
 import { useState } from "react";
-import Header from "@/components/Header";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -69,7 +68,6 @@ export default function Products() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
       {/* Header */}
       <div className="border-b border-border bg-card/50">
         <div className="container py-6">
@@ -90,12 +88,12 @@ export default function Products() {
               </div>
             </div>
 
-            <Select value={selectedCategory?.toString() || "all"} onValueChange={(v) => setSelectedCategory(v === "all" ? undefined : parseInt(v))}>
+            <Select value={selectedCategory?.toString()} onValueChange={(v) => setSelectedCategory(v ? parseInt(v) : undefined)}>
               <SelectTrigger>
                 <SelectValue placeholder="หมวดหมู่" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">ทั้งหมด</SelectItem>
+                <SelectItem value="">ทั้งหมด</SelectItem>
                 {categories?.map((cat) => (
                   <SelectItem key={cat.id} value={cat.id.toString()}>
                     {cat.name}

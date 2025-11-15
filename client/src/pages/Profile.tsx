@@ -1,5 +1,4 @@
 import { useState } from "react";
-import Header from "@/components/Header";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -20,7 +19,7 @@ export default function Profile() {
   
   const [profileForm, setProfileForm] = useState({
     name: user?.name || "",
-    profileImage: user?.profile_image || "",
+    profileImage: user?.profileImage || "",
   });
 
   const [bankForm, setBankForm] = useState({
@@ -53,7 +52,6 @@ export default function Profile() {
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-      <Header />
         <Card className="p-8 text-center max-w-md">
           <h2 className="text-2xl font-bold mb-4">กรุณาเข้าสู่ระบบ</h2>
           <Button
@@ -131,7 +129,7 @@ export default function Profile() {
                     </div>
                     <p className="text-sm text-muted-foreground">
                       ยอดเงิน: <span className="font-bold text-primary">
-                        ฿{((user?.wallet_balance || 0) / 100).toFixed(2)}
+                        ฿{((user?.walletBalance || 0) / 100).toFixed(2)}
                       </span>
                     </p>
                   </div>
@@ -183,7 +181,7 @@ export default function Profile() {
                   <div>
                     <p className="text-sm text-muted-foreground">ยอดเงินคงเหลือ</p>
                     <p className="text-3xl font-bold price-tag">
-                      ฿{((user?.wallet_balance || 0) / 100).toFixed(2)}
+                      ฿{((user?.walletBalance || 0) / 100).toFixed(2)}
                     </p>
                   </div>
                 </div>

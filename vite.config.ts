@@ -24,36 +24,6 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
-    sourcemap: false,
-    minify: "esbuild",
-    rollupOptions: {
-      output: {
-        manualChunks: (id) => {
-          if (id.includes('node_modules')) {
-            if (id.includes('react') || id.includes('react-dom')) {
-              return 'react-vendor';
-            }
-            if (id.includes('@radix-ui')) {
-              return 'ui-vendor';
-            }
-            if (id.includes('@tanstack/react-query')) {
-              return 'query';
-            }
-            if (id.includes('@trpc')) {
-              return 'trpc';
-            }
-            if (id.includes('@supabase')) {
-              return 'supabase';
-            }
-            if (id.includes('wouter')) {
-              return 'router';
-            }
-            return 'vendor';
-          }
-        },
-      },
-    },
-    chunkSizeWarningLimit: 600,
   },
   server: {
     host: true,

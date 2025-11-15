@@ -1,8 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 
 // Use environment variables with fallback to hardcoded values for Vercel deployment
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://yyuewmqrgtqcwlbndmck.supabase.co';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl5dWV3bXFyZ3RxY3dsYm5kbWNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxNzI5NzcsImV4cCI6MjA3ODc0ODk3N30.ifPiFskQAm1ITxACI2wpZgkpAryWPImhmoRdlAa5uNI';
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://rpkfptvgdjxnnfeltuer.supabase.co';
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJwa2ZwdHZnZGp4bm5mZWx0dWVyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxODY5MDgsImV4cCI6MjA3ODc2MjkwOH0.ux9Lc8EwxAKeeb9Hp858gG7f6zh9PGRNyxj-DZSVJ6w';
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {

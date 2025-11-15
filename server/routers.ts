@@ -310,7 +310,11 @@ export const appRouter = router({
         quantity: z.number().optional().default(1),
       }))
       .mutation(async ({ ctx, input }) => {
-        return db.addToCart(ctx.user.id, input.productId, input.quantity);
+        return db.addToCart({
+          userId: ctx.user.id,
+          productId: input.productId,
+          quantity: input.quantity,
+        });
       }),
 
     update: protectedProcedure
@@ -644,11 +648,12 @@ export const appRouter = router({
         }
 
         // Create order items
-        const orderItemsToCreate = orderItemsData.map(itemData => ({
-          order_id: order.id,
-          ...itemData,
-        }));
-        await db.createOrderItems(orderItemsToCreate);
+        for (const itemData of orderItemsData) {
+          await db.createOrderItem({
+            orderId: order.id,
+            ...itemData,
+          });
+        }
 
         // Deduct from buyer's wallet
         await db.updateUserWallet(ctx.user.id, -totalAmount);
@@ -698,13 +703,7 @@ export const appRouter = router({
         role: z.enum(['buyer', 'seller']).optional().default('buyer'),
       }))
       .query(async ({ ctx, input }) => {
-        const filters: any = {};
-        if (input.role === 'buyer') {
-          filters.buyerId = ctx.user.id;
-        } else if (input.role === 'seller') {
-          filters.sellerId = ctx.user.id;
-        }
-        return db.getOrders(filters);
+        return db.getUserOrders(ctx.user.id, input.role);
       }),
 
     get: protectedProcedure
@@ -855,98 +854,6 @@ export const appRouter = router({
       .query(async ({ input }) => {
         return db.getProductReviews(input.productId);
       }),
-
-    create: protectedProcedure
-      .input(z.object({
-        orderId: z.number(),
-        productId: z.number(),
-        rating: z.number().min(1).max(5),
-        comment: z.string().optional(),
-        images: z.array(z.string()).optional(),
-      }))
-      .mutation(async ({ ctx, input }) => {
-        // Verify order exists and belongs to user
-        const order = await db.getOrderById(input.orderId);
-        if (!order) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Order not found' });
-        }
-        if (order.buyerId !== ctx.user.id) {
-          throw new TRPCError({ code: 'FORBIDDEN', message: 'Not your order' });
-        }
-        if (order.status !== 'completed') {
-          throw new TRPCError({ code: 'BAD_REQUEST', message: 'Order not completed yet' });
-        }
-
-        // Check if already reviewed
-        const existingReview = await db.getReviewByOrderAndProduct(input.orderId, input.productId);
-        if (existingReview) {
-          throw new TRPCError({ code: 'BAD_REQUEST', message: 'Already reviewed this product' });
-        }
-
-        // Create review
-        const review = await db.createReview({
-          orderId: input.orderId,
-          productId: input.productId,
-          userId: ctx.user.id,
-          rating: input.rating,
-          comment: input.comment,
-          images: input.images,
-        });
-
-        // Update product rating
-        await db.updateProductRating(input.productId);
-
-        return review;
-      }),
-
-    update: protectedProcedure
-      .input(z.object({
-        reviewId: z.number(),
-        rating: z.number().min(1).max(5).optional(),
-        comment: z.string().optional(),
-        images: z.array(z.string()).optional(),
-      }))
-      .mutation(async ({ ctx, input }) => {
-        // Verify review belongs to user
-        const review = await db.getReviewById(input.reviewId);
-        if (!review) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Review not found' });
-        }
-        if (review.userId !== ctx.user.id) {
-          throw new TRPCError({ code: 'FORBIDDEN', message: 'Not your review' });
-        }
-
-        await db.updateReview(input.reviewId, {
-          rating: input.rating,
-          comment: input.comment,
-          images: input.images,
-        });
-
-        // Update product rating
-        await db.updateProductRating(review.productId);
-
-        return { success: true };
-      }),
-
-    delete: protectedProcedure
-      .input(z.object({ reviewId: z.number() }))
-      .mutation(async ({ ctx, input }) => {
-        // Verify review belongs to user
-        const review = await db.getReviewById(input.reviewId);
-        if (!review) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Review not found' });
-        }
-        if (review.userId !== ctx.user.id && ctx.user.role !== 'admin') {
-          throw new TRPCError({ code: 'FORBIDDEN', message: 'Not your review' });
-        }
-
-        await db.deleteReview(input.reviewId);
-
-        // Update product rating
-        await db.updateProductRating(review.productId);
-
-        return { success: true };
-      }),
   }),
 
   // ============= CHAT =============
@@ -984,11 +891,11 @@ export const appRouter = router({
         orderId: z.number().optional(),
       }))
       .query(async ({ ctx, input }) => {
-        return db.getConversation(ctx.user.id, input.userId);
+        return db.getConversation(ctx.user.id, input.userId, input.orderId);
       }),
 
     getSupportMessages: protectedProcedure.query(async ({ ctx }) => {
-      return db.getSupportMessages();
+      return db.getSupportMessages(ctx.user.id);
     }),
 
     markAsRead: protectedProcedure
@@ -1050,11 +957,7 @@ export const appRouter = router({
         status: z.string().optional(),
       }))
       .query(async ({ input }) => {
-        const filters: any = {};
-        if (input.status) {
-          filters.status = input.status;
-        }
-        return db.getDisputes(filters);
+        return db.getAllDisputes(input.status);
       }),
 
     resolve: adminProcedure

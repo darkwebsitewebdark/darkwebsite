@@ -1,277 +1,245 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Header from "@/components/Header";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { trpc } from "@/lib/trpc";
-import { Package, Clock, Truck, CheckCircle, XCircle, Eye } from "lucide-react";
-import { Link, useRoute } from "wouter";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { supabase } from "@/lib/supabase";
+import { Package, Truck, CheckCircle, XCircle, Clock, Eye } from "lucide-react";
+import { Link, useLocation } from "wouter";
 import { toast } from "sonner";
+import { getLoginUrl } from "@/const";
+
+type Order = {
+  id: number;
+  order_number: string;
+  buyer_id: number;
+  seller_id: number;
+  total_amount: number;
+  status: string;
+  shipping_address: any;
+  created_at: string;
+  updated_at: string;
+  order_items: {
+    id: number;
+    product_id: number;
+    quantity: number;
+    price: number;
+    product: {
+      id: number;
+      name: string;
+      image_url: string;
+      images: string[];
+    };
+  }[];
+};
+
+const statusConfig = {
+  pending_payment: { label: 'รอชำระเงิน', color: 'bg-yellow-500', icon: Clock },
+  paid: { label: 'ชำระเงินแล้ว', color: 'bg-blue-500', icon: CheckCircle },
+  processing: { label: 'กำลังเตรียมสินค้า', color: 'bg-purple-500', icon: Package },
+  shipped: { label: 'จัดส่งแล้ว', color: 'bg-cyan-500', icon: Truck },
+  delivered: { label: 'ส่งสำเร็จ', color: 'bg-green-500', icon: CheckCircle },
+  cancelled: { label: 'ยกเลิก', color: 'bg-red-500', icon: XCircle },
+  refunded: { label: 'คืนเงินแล้ว', color: 'bg-gray-500', icon: XCircle },
+};
 
 export default function Orders() {
-  const [, params] = useRoute("/orders/:id?");
-  const orderId = params?.id ? parseInt(params.id) : undefined;
-  
-  const { isAuthenticated } = useAuth();
-  const [filter, setFilter] = useState<string>("all");
+  const { user, isAuthenticated } = useAuth();
+  const [, setLocation] = useLocation();
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('all');
 
-  const { data: orders } = trpc.orders.list.useQuery({}, {
-    enabled: isAuthenticated,
-  });
+  useEffect(() => {
+    async function fetchOrders() {
+      if (!user) {
+        setIsLoading(false);
+        return;
+      }
 
-  const { data: orderDetail } = trpc.orders.get.useQuery(
-    { id: orderId! },
-    { enabled: !!orderId }
-  );
+      setIsLoading(true);
+      const { data, error } = await supabase
+        .from('orders')
+        .select(`
+          *,
+          order_items (
+            *,
+            product:products (
+              id,
+              name,
+              image_url,
+              images
+            )
+          )
+        `)
+        .eq('buyer_id', user.id)
+        .order('created_at', { ascending: false });
 
-  const confirmDeliveryMutation = trpc.orders.confirmDelivery.useMutation({
-    onSuccess: () => {
-      toast.success("ยืนยันการรับสินค้าแล้ว");
-    },
-  });
+      if (error) {
+        console.error('Error fetching orders:', error);
+        toast.error('ไม่สามารถโหลดคำสั่งซื้อได้');
+        setOrders([]);
+      } else {
+        setOrders(data || []);
+      }
+      setIsLoading(false);
+    }
+
+    fetchOrders();
+  }, [user]);
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-      <Header />
-        <Card className="p-8 text-center max-w-md">
-          <Package className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
-          <h2 className="text-2xl font-bold mb-4">กรุณาเข้าสู่ระบบ</h2>
-          <p className="text-muted-foreground mb-6">
-            คุณต้องเข้าสู่ระบบเพื่อดูคำสั่งซื้อ
-          </p>
-          <Link href="/auth">
-            <Button size="lg">เข้าสู่ระบบ</Button>
-          </Link>
-        </Card>
-      </div>
-    );
-  }
-
-  // If viewing specific order
-  if (orderId && orderDetail) {
-    return (
       <div className="min-h-screen bg-background">
-        <div className="container py-8">
-          <div className="max-w-4xl mx-auto">
-            <Link href="/orders">
-              <Button variant="ghost" className="mb-4">
-                ← กลับไปรายการคำสั่งซื้อ
-              </Button>
-            </Link>
-
-            <Card className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h1 className="text-2xl font-bold">
-                    คำสั่งซื้อ #{orderDetail.orderNumber}
-                  </h1>
-                  <p className="text-muted-foreground">
-                    {new Date(orderDetail.createdAt).toLocaleString("th-TH")}
-                  </p>
-                </div>
-                <Badge className={getStatusColor(orderDetail.status)}>
-                  {getStatusText(orderDetail.status)}
-                </Badge>
-              </div>
-
-              {/* Order Items */}
-              <div className="space-y-4 mb-6">
-                <h2 className="font-semibold">สินค้าในคำสั่งซื้อ</h2>
-                {orderDetail.items?.map((item: any) => (
-                  <div key={item.id} className="flex gap-4 border-b pb-4">
-                    <img
-                      src={item.product?.images?.[0] || "/placeholder.png"}
-                      alt={item.product?.name}
-                      className="w-20 h-20 object-cover rounded"
-                    />
-                    <div className="flex-1">
-                      <h3 className="font-semibold">{item.product?.name}</h3>
-                      <p className="text-sm text-muted-foreground">
-                        จำนวน: {item.quantity}
-                      </p>
-                      <p className="font-semibold">
-                        ฿{((item.price / 100) * item.quantity).toFixed(2)}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Shipping Address */}
-              <div className="mb-6">
-                <h2 className="font-semibold mb-2">ที่อยู่จัดส่ง</h2>
-                <div className="text-sm text-muted-foreground">
-                  <p>{orderDetail.shippingAddress?.name}</p>
-                  <p>{orderDetail.shippingAddress?.phone}</p>
-                  <p>{orderDetail.shippingAddress?.address}</p>
-                </div>
-              </div>
-
-              {/* Summary */}
-              <div className="border-t pt-4">
-                <div className="flex justify-between mb-2">
-                  <span>ยอดรวมสินค้า</span>
-                  <span>฿{(orderDetail.totalAmount / 100).toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between mb-2">
-                  <span>ค่าจัดส่ง</span>
-                  <span>฿{(orderDetail.shippingFee / 100).toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between font-bold text-lg">
-                  <span>ยอดรวมทั้งหมด</span>
-                  <span>
-                    ฿{((orderDetail.totalAmount + orderDetail.shippingFee) / 100).toFixed(2)}
-                  </span>
-                </div>
-              </div>
-
-              {/* Actions */}
-              {orderDetail.status === "shipped" && (
-                <div className="mt-6">
-                  <Button
-                    onClick={() => confirmDeliveryMutation.mutate({ orderId: orderDetail.id })}
-                    disabled={confirmDeliveryMutation.isPending}
-                    className="w-full"
-                  >
-                    <CheckCircle className="w-4 h-4 mr-2" />
-                    ยืนยันการรับสินค้า
-                  </Button>
-                </div>
-              )}
-            </Card>
-          </div>
+        <Header />
+        <div className="container py-8 flex items-center justify-center min-h-[60vh]">
+          <Card className="p-8 text-center max-w-md">
+            <h2 className="text-2xl font-bold mb-4">กรุณาเข้าสู่ระบบ</h2>
+            <Button
+              size="lg"
+              className="btn-glow gradient-red-orange"
+              onClick={() => window.location.href = getLoginUrl()}
+            >
+              เข้าสู่ระบบ
+            </Button>
+          </Card>
         </div>
       </div>
     );
   }
 
-  // Orders list
-  const filteredOrders = orders?.filter(order => 
-    filter === "all" || order.status === filter
-  ) || [];
+  const filteredOrders = activeTab === 'all' 
+    ? orders 
+    : orders.filter(order => order.status === activeTab);
 
   return (
     <div className="min-h-screen bg-background">
+      <Header />
       <div className="container py-8">
-        <div className="max-w-6xl mx-auto">
-          <h1 className="text-3xl font-bold mb-6">คำสั่งซื้อของฉัน</h1>
+        <h1 className="text-4xl font-bold mb-8">คำสั่งซื้อของฉัน</h1>
 
-          {/* Filters */}
-          <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
-            {[
-              { value: "all", label: "ทั้งหมด" },
-              { value: "pending", label: "รอชำระเงิน" },
-              { value: "paid", label: "ชำระแล้ว" },
-              { value: "processing", label: "กำลังเตรียมสินค้า" },
-              { value: "shipped", label: "จัดส่งแล้ว" },
-              { value: "delivered", label: "ส่งสำเร็จ" },
-              { value: "cancelled", label: "ยกเลิก" },
-            ].map((item) => (
-              <Button
-                key={item.value}
-                variant={filter === item.value ? "default" : "outline"}
-                size="sm"
-                onClick={() => setFilter(item.value)}
-              >
-                {item.label}
-              </Button>
-            ))}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
+          <TabsList className="grid w-full grid-cols-7">
+            <TabsTrigger value="all">ทั้งหมด</TabsTrigger>
+            <TabsTrigger value="pending_payment">รอชำระ</TabsTrigger>
+            <TabsTrigger value="paid">ชำระแล้ว</TabsTrigger>
+            <TabsTrigger value="processing">เตรียมสินค้า</TabsTrigger>
+            <TabsTrigger value="shipped">จัดส่งแล้ว</TabsTrigger>
+            <TabsTrigger value="delivered">สำเร็จ</TabsTrigger>
+            <TabsTrigger value="cancelled">ยกเลิก</TabsTrigger>
+          </TabsList>
+        </Tabs>
+
+        {isLoading ? (
+          <div className="text-center py-12">
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
+            <p className="text-muted-foreground">กำลังโหลด...</p>
           </div>
-
-          {/* Orders List */}
+        ) : filteredOrders.length === 0 ? (
+          <Card className="p-12 text-center">
+            <Package className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-50" />
+            <h2 className="text-2xl font-bold mb-2">
+              {activeTab === 'all' ? 'ยังไม่มีคำสั่งซื้อ' : 'ไม่พบคำสั่งซื้อ'}
+            </h2>
+            <p className="text-muted-foreground mb-6">
+              {activeTab === 'all' 
+                ? 'เริ่มช้อปปิ้งเพื่อสร้างคำสั่งซื้อแรกของคุณ' 
+                : 'ไม่พบคำสั่งซื้อในสถานะนี้'}
+            </p>
+            <Link href="/products">
+              <Button className="btn-glow gradient-red-orange">
+                เริ่มช้อปปิ้ง
+              </Button>
+            </Link>
+          </Card>
+        ) : (
           <div className="space-y-4">
-            {filteredOrders.length > 0 ? (
-              filteredOrders.map((order) => (
+            {filteredOrders.map((order) => {
+              const status = statusConfig[order.status as keyof typeof statusConfig] || statusConfig.pending_payment;
+              const StatusIcon = status.icon;
+
+              return (
                 <Card key={order.id} className="p-6">
                   <div className="flex items-center justify-between mb-4">
-                    <div>
-                      <h3 className="font-semibold">
-                        คำสั่งซื้อ #{order.orderNumber}
-                      </h3>
-                      <p className="text-sm text-muted-foreground">
-                        {new Date(order.createdAt).toLocaleString("th-TH")}
+                    <div className="flex items-center gap-4">
+                      <div>
+                        <p className="text-sm text-muted-foreground">หมายเลขคำสั่งซื้อ</p>
+                        <p className="font-mono font-semibold">{order.order_number}</p>
+                      </div>
+                      <Badge className={`${status.color} text-white`}>
+                        <StatusIcon className="w-3 h-3 mr-1" />
+                        {status.label}
+                      </Badge>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm text-muted-foreground">วันที่สั่งซื้อ</p>
+                      <p className="font-semibold">
+                        {new Date(order.created_at).toLocaleDateString('th-TH', {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric'
+                        })}
                       </p>
                     </div>
-                    <Badge className={getStatusColor(order.status)}>
-                      {getStatusText(order.status)}
-                    </Badge>
                   </div>
 
-                  <div className="flex items-center justify-between">
+                  <div className="space-y-3 mb-4">
+                    {order.order_items.map((item) => (
+                      <div key={item.id} className="flex gap-4">
+                        <Link href={`/product/${item.product_id}`}>
+                          <div className="w-20 h-20 rounded-lg overflow-hidden bg-muted flex-shrink-0">
+                            <img
+                              src={item.product.images?.[0] || item.product.image_url}
+                              alt={item.product.name}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        </Link>
+                        <div className="flex-1">
+                          <Link href={`/product/${item.product_id}`}>
+                            <h3 className="font-semibold hover:text-primary transition-colors">
+                              {item.product.name}
+                            </h3>
+                          </Link>
+                          <p className="text-sm text-muted-foreground">จำนวน: {item.quantity}</p>
+                          <p className="text-sm font-bold text-primary">
+                            ฿{(item.price / 100).toFixed(2)}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="border-t border-border pt-4 flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-muted-foreground">
-                        {order.items?.length || 0} รายการ
-                      </p>
-                      <p className="font-semibold text-lg">
-                        ฿{((order.totalAmount + order.shippingFee) / 100).toFixed(2)}
+                      <p className="text-sm text-muted-foreground mb-1">ยอดรวมทั้งหมด</p>
+                      <p className="text-2xl font-bold text-primary">
+                        ฿{(order.total_amount / 100).toFixed(2)}
                       </p>
                     </div>
-                    <Link href={`/orders/${order.id}`}>
-                      <Button variant="outline">
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        onClick={() => setLocation(`/order/${order.id}`)}
+                      >
                         <Eye className="w-4 h-4 mr-2" />
                         ดูรายละเอียด
                       </Button>
-                    </Link>
+                      {order.status === 'delivered' && (
+                        <Button className="btn-glow gradient-red-orange">
+                          รีวิวสินค้า
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </Card>
-              ))
-            ) : (
-              <Card className="p-12 text-center">
-                <Package className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
-                <h3 className="text-xl font-semibold mb-2">ไม่มีคำสั่งซื้อ</h3>
-                <p className="text-muted-foreground mb-6">
-                  {filter === "all"
-                    ? "คุณยังไม่มีคำสั่งซื้อ"
-                    : `ไม่มีคำสั่งซื้อสถานะ ${getStatusText(filter)}`}
-                </p>
-                <Link href="/products">
-                  <Button>เริ่มช้อปปิ้ง</Button>
-                </Link>
-              </Card>
-            )}
+              );
+            })}
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
-}
-
-function getStatusColor(status: string): string {
-  switch (status) {
-    case "pending":
-      return "bg-yellow-500";
-    case "paid":
-      return "bg-blue-500";
-    case "processing":
-      return "bg-purple-500";
-    case "shipped":
-      return "bg-orange-500";
-    case "delivered":
-      return "bg-green-500";
-    case "cancelled":
-      return "bg-red-500";
-    default:
-      return "bg-gray-500";
-  }
-}
-
-function getStatusText(status: string): string {
-  switch (status) {
-    case "pending":
-      return "รอชำระเงิน";
-    case "paid":
-      return "ชำระแล้ว";
-    case "processing":
-      return "กำลังเตรียมสินค้า";
-    case "shipped":
-      return "จัดส่งแล้ว";
-    case "delivered":
-      return "ส่งสำเร็จ";
-    case "cancelled":
-      return "ยกเลิก";
-    default:
-      return status;
-  }
 }
