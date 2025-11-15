@@ -334,9 +334,9 @@ export default function Home() {
             <div>
               <h4 className="font-semibold mb-4">นโยบาย</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><a href="#" className="hover:text-foreground transition-colors">นโยบายความเป็นส่วนตัว</a></li>
-                <li><a href="#" className="hover:text-foreground transition-colors">ข้อกำหนดการใช้งาน</a></li>
-                <li><a href="#" className="hover:text-foreground transition-colors">นโยบายการคืนเงิน</a></li>
+                <li><Link href="/privacy"><a className="hover:text-foreground transition-colors">นโยบายความเป็นส่วนตัว</a></Link></li>
+                <li><Link href="/terms"><a className="hover:text-foreground transition-colors">ข้อกำหนดการใช้งาน</a></Link></li>
+                <li><Link href="/refund"><a className="hover:text-foreground transition-colors">นโยบายการคืนเงิน</a></Link></li>
               </ul>
             </div>
           </div>
