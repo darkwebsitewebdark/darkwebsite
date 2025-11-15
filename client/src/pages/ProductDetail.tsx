@@ -15,26 +15,25 @@ type Product = {
   name: string;
   description: string;
   price: number;
-  image_url: string;
-  category_id: number;
-  seller_id: number;
+  categoryId: number;
+  sellerId: number;
   stock: number;
-  is_active: boolean;
+  status: string;
   images: string[];
-  sales_count: number;
-  created_at: string;
+  sales: number;
+  views: number;
+  createdAt: string;
 };
 
 type Review = {
   id: number;
-  product_id: number;
-  user_id: number;
+  productId: number;
+  userId: number;
   rating: number;
   comment: string;
-  created_at: string;
-  user?: {
+  createdAt: string;
+  users?: {
     name: string;
-    profile_image?: string;
   };
 };
 
@@ -80,13 +79,12 @@ export default function ProductDetail() {
         .from('reviews')
         .select(`
           *,
-          users:user_id (
-            name,
-            profile_image
+          users (
+            name
           )
         `)
-        .eq('product_id', productId)
-        .order('created_at', { ascending: false });
+        .eq('productId', productId)
+        .order('createdAt', { ascending: false });
 
       if (error) {
         console.error('Error fetching reviews:', error);
@@ -150,7 +148,7 @@ export default function ProductDetail() {
     );
   }
 
-  const images = product.images && product.images.length > 0 ? product.images : [product.image_url];
+  const images = product.images && product.images.length > 0 ? product.images : [];
   const avgRating = reviews.length > 0 ? reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length : 4.5;
 
   return (
@@ -214,7 +212,7 @@ export default function ProductDetail() {
                 </span>
               </div>
               <span className="text-sm text-muted-foreground">
-                ขายแล้ว {product.sales_count || 0}
+                ขายแล้ว {product.sales || 0}
               </span>
             </div>
 
@@ -313,22 +311,14 @@ export default function ProductDetail() {
                 <div key={review.id} className="border-b border-border pb-6 last:border-0">
                   <div className="flex items-start gap-4">
                     <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
-                      {review.user?.profile_image ? (
-                        <img
-                          src={review.user.profile_image}
-                          alt={review.user.name}
-                          className="w-full h-full rounded-full object-cover"
-                        />
-                      ) : (
-                        <span className="text-sm font-semibold">
-                          {review.user?.name?.charAt(0) || 'U'}
-                        </span>
-                      )}
+                      <span className="text-sm font-semibold">
+                        {review.users?.name?.charAt(0) || 'U'}
+                      </span>
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center justify-between mb-2">
                         <div>
-                          <p className="font-semibold">{review.user?.name || 'ผู้ใช้'}</p>
+                          <p className="font-semibold">{review.users?.name || 'ผู้ใช้'}</p>
                           <div className="flex items-center gap-2">
                             <div className="flex">
                               {[1, 2, 3, 4, 5].map((star) => (
@@ -341,7 +331,7 @@ export default function ProductDetail() {
                               ))}
                             </div>
                             <span className="text-xs text-muted-foreground">
-                              {new Date(review.created_at).toLocaleDateString('th-TH')}
+                              {new Date(review.createdAt).toLocaleDateString('th-TH')}
                             </span>
                           </div>
                         </div>
