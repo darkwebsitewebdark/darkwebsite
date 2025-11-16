@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { APP_LOGO, APP_TITLE } from "@/const";
-import { UserPlus, Mail, Lock, User, CheckCircle } from "lucide-react";
+import { UserPlus, Mail, Lock, User, CheckCircle, AlertCircle } from "lucide-react";
 import { useLocation } from "wouter";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
@@ -22,6 +22,7 @@ export default function Register() {
   const [isLoading, setIsLoading] = useState(false);
   const [registrationSuccess, setRegistrationSuccess] = useState(false);
   const [needsEmailVerification, setNeedsEmailVerification] = useState(false);
+  const [registeredEmail, setRegisteredEmail] = useState("");
 
   useEffect(() => {
     // Redirect if already logged in
@@ -52,6 +53,8 @@ export default function Register() {
     setIsLoading(true);
 
     try {
+      console.log('[Register] Starting registration for:', email);
+      
       // Sign up with Supabase Auth
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -64,31 +67,41 @@ export default function Register() {
         },
       });
 
+      console.log('[Register] SignUp response:', { data, error });
+
       if (error) {
-        toast.error(error.message);
+        console.error('[Register] SignUp error:', error);
+        toast.error(`เกิดข้อผิดพลาด: ${error.message}`);
         return;
       }
 
-      if (data.user) {
-        // User record will be created automatically by database trigger
-        setRegistrationSuccess(true);
-
-        // Check if email confirmation is required
-        if (data.session) {
-          // Email confirmation is disabled - auto login successful
-          toast.success("สมัครสมาชิกและเข้าสู่ระบบสำเร็จ!");
-          setTimeout(() => {
-            setLocation("/");
-          }, 1500);
-        } else {
-          // Email confirmation is enabled - need to verify email
-          setNeedsEmailVerification(true);
-          toast.success("สมัครสมาชิกสำเร็จ! กรุณาตรวจสอบอีเมลเพื่อยืนยันบัญชี");
-        }
+      if (!data.user) {
+        console.error('[Register] No user created');
+        toast.error("ไม่สามารถสร้างบัญชีได้ กรุณาลองใหม่อีกครั้ง");
+        return;
       }
-    } catch (error) {
-      console.error('Register error:', error);
-      toast.error("เกิดข้อผิดพลาดในการสมัครสมาชิก");
+
+      console.log('[Register] User created:', data.user.id);
+      setRegisteredEmail(email);
+      setRegistrationSuccess(true);
+
+      // Check if email confirmation is required
+      if (data.session) {
+        // Email confirmation is disabled - auto login successful
+        console.log('[Register] Auto login successful');
+        toast.success("สมัครสมาชิกและเข้าสู่ระบบสำเร็จ!");
+        setTimeout(() => {
+          setLocation("/");
+        }, 1500);
+      } else {
+        // Email confirmation is enabled - need to verify email
+        console.log('[Register] Email confirmation required');
+        setNeedsEmailVerification(true);
+        toast.success("สมัครสมาชิกสำเร็จ! กรุณาตรวจสอบอีเมลเพื่อยืนยันบัญชี");
+      }
+    } catch (error: any) {
+      console.error('[Register] Unexpected error:', error);
+      toast.error("เกิดข้อผิดพลาดในการสมัครสมาชิก กรุณาลองใหม่อีกครั้ง");
     } finally {
       setIsLoading(false);
     }
@@ -151,7 +164,7 @@ export default function Register() {
             </h2>
             
             <p className="text-muted-foreground mb-6">
-              เราได้ส่งอีเมลยืนยันไปที่ <strong className="text-foreground">{email}</strong> แล้ว
+              เราได้ส่งอีเมลยืนยันไปที่ <strong className="text-foreground">{registeredEmail}</strong> แล้ว
             </p>
             
             <div className="bg-muted/50 rounded-lg p-4 mb-6 text-left">
@@ -162,6 +175,18 @@ export default function Register() {
                 <li>คลิกลิงก์ยืนยันในอีเมล</li>
                 <li>กลับมาเข้าสู่ระบบ</li>
               </ol>
+            </div>
+
+            <div className="bg-yellow-500/10 border border-yellow-500/50 rounded-lg p-4 mb-6 text-left">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" />
+                <div className="text-sm">
+                  <p className="font-semibold text-yellow-500 mb-1">หมายเหตุ:</p>
+                  <p className="text-muted-foreground">
+                    อีเมลอาจใช้เวลา 5-10 นาทีในการส่ง หากไม่ได้รับ กรุณาตรวจสอบโฟลเดอร์ Spam หรือ Junk
+                  </p>
+                </div>
+              </div>
             </div>
 
             <div className="space-y-3">
@@ -182,10 +207,6 @@ export default function Register() {
                 ส่งอีเมลยืนยันอีกครั้ง
               </Button>
             </div>
-
-            <p className="text-xs text-muted-foreground mt-6">
-              ไม่ได้รับอีเมล? ตรวจสอบในโฟลเดอร์ Spam หรือ Junk
-            </p>
           </Card>
 
           <div className="text-center mt-6">
