@@ -70,22 +70,7 @@ export default function Register() {
       }
 
       if (data.user) {
-        // Create user record in database
-        const { error: dbError } = await supabase
-          .from('users')
-          .insert({
-            auth_id: data.user.id,
-            email: data.user.email,
-            name,
-            role: 'user',
-            wallet_balance: 0,
-          });
-
-        if (dbError) {
-          console.error('Error creating user record:', dbError);
-          // Continue anyway - we'll create the record on first login
-        }
-
+        // User record will be created automatically by database trigger
         setRegistrationSuccess(true);
 
         // Check if email confirmation is required
@@ -315,11 +300,12 @@ export default function Register() {
             </div>
 
             {/* Terms Checkbox */}
-            <div className="flex items-start space-x-2">
+            <div className="flex items-start space-x-3">
               <Checkbox
                 id="terms"
                 checked={acceptTerms}
                 onCheckedChange={(checked) => setAcceptTerms(checked as boolean)}
+                disabled={isLoading}
               />
               <label
                 htmlFor="terms"
@@ -341,16 +327,25 @@ export default function Register() {
               type="submit"
               size="lg"
               disabled={isLoading}
-              className="w-full btn-neon bg-primary hover:bg-primary/90 text-primary-foreground font-bold"
+              className="w-full btn-neon bg-primary hover:bg-primary/90"
             >
-              <UserPlus className="w-5 h-5 mr-2" />
-              {isLoading ? "กำลังสมัครสมาชิก..." : "สมัครสมาชิก"}
+              {isLoading ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                  กำลังสมัคร...
+                </>
+              ) : (
+                <>
+                  <UserPlus className="w-5 h-5 mr-2" />
+                  สมัครสมาชิก
+                </>
+              )}
             </Button>
 
             {/* Divider */}
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-muted"></span>
+                <div className="w-full border-t border-border"></div>
               </div>
               <div className="relative flex justify-center text-xs uppercase">
                 <span className="bg-background px-2 text-muted-foreground">
@@ -359,33 +354,33 @@ export default function Register() {
               </div>
             </div>
 
-            {/* Google Sign Up Button */}
+            {/* Google Sign Up */}
             <Button
               type="button"
-              onClick={handleGoogleSignUp}
-              size="lg"
               variant="outline"
+              size="lg"
+              onClick={handleGoogleSignUp}
               disabled={isLoading}
               className="w-full"
             >
               <Mail className="w-5 h-5 mr-2" />
               สมัครด้วย Google
             </Button>
-
-            {/* Login Link */}
-            <div className="text-center text-sm">
-              <span className="text-muted-foreground">มีบัญชีอยู่แล้ว? </span>
-              <a
-                href="/login"
-                className="text-primary hover:underline font-bold"
-              >
-                เข้าสู่ระบบ
-              </a>
-            </div>
           </form>
+
+          {/* Login Link */}
+          <div className="mt-6 text-center text-sm text-muted-foreground">
+            มีบัญชีอยู่แล้ว?{" "}
+            <a
+              href="/login"
+              className="text-primary hover:underline font-medium"
+            >
+              เข้าสู่ระบบ
+            </a>
+          </div>
         </Card>
 
-        {/* Back to Home */}
+        {/* Back Button */}
         <div className="text-center mt-6">
           <Button
             variant="ghost"
