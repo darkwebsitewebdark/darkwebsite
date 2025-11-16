@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { APP_LOGO, APP_TITLE } from "@/const";
-import { UserPlus, Mail, Lock, User } from "lucide-react";
+import { UserPlus, Mail, Lock, User, CheckCircle } from "lucide-react";
 import { useLocation } from "wouter";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
@@ -20,6 +20,8 @@ export default function Register() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [registrationSuccess, setRegistrationSuccess] = useState(false);
+  const [needsEmailVerification, setNeedsEmailVerification] = useState(false);
 
   useEffect(() => {
     // Redirect if already logged in
@@ -58,6 +60,7 @@ export default function Register() {
           data: {
             name,
           },
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
         },
       });
 
@@ -67,18 +70,35 @@ export default function Register() {
       }
 
       if (data.user) {
-        // Auto login after register
-        const { error: signInError } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
+        // Create user record in database
+        const { error: dbError } = await supabase
+          .from('users')
+          .insert({
+            auth_id: data.user.id,
+            email: data.user.email,
+            name,
+            role: 'user',
+            wallet_balance: 0,
+          });
 
-        if (signInError) {
-          toast.success("สมัครสมาชิกสำเร็จ! กรุณาเข้าสู่ระบบ");
-          setLocation("/login");
-        } else {
+        if (dbError) {
+          console.error('Error creating user record:', dbError);
+          // Continue anyway - we'll create the record on first login
+        }
+
+        setRegistrationSuccess(true);
+
+        // Check if email confirmation is required
+        if (data.session) {
+          // Email confirmation is disabled - auto login successful
           toast.success("สมัครสมาชิกและเข้าสู่ระบบสำเร็จ!");
-          setLocation("/");
+          setTimeout(() => {
+            setLocation("/");
+          }, 1500);
+        } else {
+          // Email confirmation is enabled - need to verify email
+          setNeedsEmailVerification(true);
+          toast.success("สมัครสมาชิกสำเร็จ! กรุณาตรวจสอบอีเมลเพื่อยืนยันบัญชี");
         }
       }
     } catch (error) {
@@ -122,6 +142,76 @@ export default function Register() {
         <div className="text-center">
           <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-muted-foreground">กำลังโหลด...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show success message if registration is complete and needs email verification
+  if (registrationSuccess && needsEmailVerification) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4 relative crt-effect">
+        {/* Background effects */}
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-background to-secondary/10"></div>
+        <div className="absolute inset-0 spray-texture"></div>
+
+        <div className="w-full max-w-md relative z-10">
+          <Card className="card-neon p-8 text-center">
+            <div className="w-20 h-20 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-6">
+              <CheckCircle className="w-12 h-12 text-primary" />
+            </div>
+            
+            <h2 className="text-2xl font-bold neon-text-red mb-4">
+              สมัครสมาชิกสำเร็จ!
+            </h2>
+            
+            <p className="text-muted-foreground mb-6">
+              เราได้ส่งอีเมลยืนยันไปที่ <strong className="text-foreground">{email}</strong> แล้ว
+            </p>
+            
+            <div className="bg-muted/50 rounded-lg p-4 mb-6 text-left">
+              <p className="text-sm mb-2">📧 กรุณาทำตามขั้นตอนต่อไปนี้:</p>
+              <ol className="text-sm text-muted-foreground space-y-1 ml-4 list-decimal">
+                <li>เปิดอีเมลของคุณ</li>
+                <li>ค้นหาอีเมลจาก dLNk Dark Shop</li>
+                <li>คลิกลิงก์ยืนยันในอีเมล</li>
+                <li>กลับมาเข้าสู่ระบบ</li>
+              </ol>
+            </div>
+
+            <div className="space-y-3">
+              <Button
+                onClick={() => setLocation("/login")}
+                size="lg"
+                className="w-full btn-neon bg-primary hover:bg-primary/90"
+              >
+                ไปหน้าเข้าสู่ระบบ
+              </Button>
+              
+              <Button
+                onClick={() => setLocation("/resend-verification")}
+                size="lg"
+                variant="outline"
+                className="w-full"
+              >
+                ส่งอีเมลยืนยันอีกครั้ง
+              </Button>
+            </div>
+
+            <p className="text-xs text-muted-foreground mt-6">
+              ไม่ได้รับอีเมล? ตรวจสอบในโฟลเดอร์ Spam หรือ Junk
+            </p>
+          </Card>
+
+          <div className="text-center mt-6">
+            <Button
+              variant="ghost"
+              onClick={() => setLocation("/")}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              ← กลับหน้าแรก
+            </Button>
+          </div>
         </div>
       </div>
     );

@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { APP_LOGO, APP_TITLE } from "@/const";
-import { LogIn, ShieldCheck, Zap, TrendingUp, Mail } from "lucide-react";
+import { LogIn, ShieldCheck, Zap, TrendingUp, Mail, AlertCircle } from "lucide-react";
 import { useLocation } from "wouter";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
@@ -16,6 +16,7 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [showEmailVerificationWarning, setShowEmailVerificationWarning] = useState(false);
 
   useEffect(() => {
     // Redirect if already logged in
@@ -27,6 +28,7 @@ export default function Login() {
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setShowEmailVerificationWarning(false);
 
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -35,7 +37,17 @@ export default function Login() {
       });
 
       if (error) {
-        toast.error(error.message);
+        // Handle specific error cases
+        if (error.message.toLowerCase().includes('email not confirmed') || 
+            error.message.toLowerCase().includes('email confirmation')) {
+          setShowEmailVerificationWarning(true);
+          toast.error("กรุณายืนยันอีเมลก่อนเข้าสู่ระบบ");
+        } else if (error.message.toLowerCase().includes('invalid') || 
+                   error.message.toLowerCase().includes('credentials')) {
+          toast.error("อีเมลหรือรหัสผ่านไม่ถูกต้อง");
+        } else {
+          toast.error(error.message);
+        }
         return;
       }
 
@@ -61,7 +73,14 @@ export default function Login() {
 
           if (insertError) {
             console.error('Error creating user:', insertError);
+            // Continue anyway - user can still use the app
           }
+        } else {
+          // Update last_signed_in
+          await supabase
+            .from('users')
+            .update({ last_signed_in: new Date().toISOString() })
+            .eq('auth_id', data.user.id);
         }
 
         toast.success("เข้าสู่ระบบสำเร็จ!");
@@ -129,6 +148,31 @@ export default function Login() {
             เข้าสู่โลกของสตรีทมาร์เก็ต
           </p>
         </div>
+
+        {/* Email Verification Warning */}
+        {showEmailVerificationWarning && (
+          <Card className="card-neon p-4 mb-6 bg-yellow-500/10 border-yellow-500/50">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <h3 className="font-bold text-sm mb-1 text-yellow-500">
+                  ยังไม่ได้ยืนยันอีเมล
+                </h3>
+                <p className="text-xs text-muted-foreground mb-3">
+                  กรุณาตรวจสอบอีเมลและคลิกลิงก์ยืนยันก่อนเข้าสู่ระบบ
+                </p>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setLocation("/resend-verification")}
+                  className="w-full"
+                >
+                  ส่งอีเมลยืนยันอีกครั้ง
+                </Button>
+              </div>
+            </div>
+          </Card>
+        )}
 
         {/* Login Card */}
         <Card className="card-neon p-8">

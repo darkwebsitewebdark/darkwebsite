@@ -17,6 +17,7 @@ import OrderDetail from "./pages/OrderDetail";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import AuthCallback from "./pages/AuthCallback";
+import ResendVerification from "./pages/ResendVerification";
 import SellerRegister from "./pages/SellerRegister";
 import Chat from "./pages/Chat";
 import { ProtectedRoute } from "./components/ProtectedRoute";
@@ -75,6 +76,7 @@ function Router() {
       </Route>
       <Route path={"/login"} component={Login} />
       <Route path={"/register"} component={Register} />
+      <Route path={"/resend-verification"} component={ResendVerification} />
       <Route path={"/auth/callback"} component={AuthCallback} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
