@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useLocation, Link } from "wouter";
 import { supabase } from "../lib/supabase";
 import { toast } from "react-hot-toast";
 
 export default function Register() {
-  const navigate = useNavigate();
+  const [, setLocation] = useLocation();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -110,7 +110,7 @@ export default function Register() {
         console.log('[Register] Auto login successful - redirecting to home');
         toast.success("สมัครสมาชิกสำเร็จ! กำลังเข้าสู่ระบบ...");
         setTimeout(() => {
-          navigate("/");
+          setLocation("/");
         }, 1500);
       } else {
         // Email confirmation is enabled
@@ -196,13 +196,13 @@ export default function Register() {
 
           <div className="space-y-3">
             <button
-              onClick={() => navigate("/login")}
+              onClick={() => setLocation("/login")}
               className="w-full bg-red-600 hover:bg-red-700 text-white py-3 rounded-lg font-medium transition-colors"
             >
               ไปหน้าเข้าสู่ระบบ
             </button>
             <button
-              onClick={() => navigate("/resend-verification")}
+              onClick={() => setLocation("/resend-verification")}
               className="w-full bg-gray-800 hover:bg-gray-700 text-white py-3 rounded-lg font-medium transition-colors"
             >
               ส่งอีเมลยืนยันอีกครั้ง
@@ -403,7 +403,7 @@ export default function Register() {
         {/* Back Button */}
         <div className="mt-6 text-center">
           <button
-            onClick={() => navigate("/")}
+            onClick={() => setLocation("/")}
             className="text-gray-400 hover:text-white transition-colors inline-flex items-center"
           >
             <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
