@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useLocation, Link } from "wouter";
 import { supabase } from "../lib/supabase";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 
 export default function Register() {
   const [, setLocation] = useLocation();
