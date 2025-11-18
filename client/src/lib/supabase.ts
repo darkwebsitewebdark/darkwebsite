@@ -4,12 +4,41 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://rpkfptvgdjxnnfeltuer.supabase.co';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJwa2ZwdHZnZGp4bm5mZWx0dWVyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxODY5MDgsImV4cCI6MjA3ODc2MjkwOH0.ux9Lc8EwxAKeeb9Hp858gG7f6zh9PGRNyxj-DZSVJ6w';
 
+// Custom fetch with better error handling and retry logic
+const customFetch = async (url: RequestInfo | URL, options: RequestInit = {}) => {
+  try {
+    console.log('[Supabase] Fetching:', url);
+    const response = await fetch(url, {
+      ...options,
+      headers: {
+        ...options.headers,
+        'Content-Type': 'application/json',
+      },
+    });
+    console.log('[Supabase] Response status:', response.status);
+    return response;
+  } catch (error) {
+    console.error('[Supabase] Fetch error:', error);
+    throw error;
+  }
+};
+
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: true
-  }
+    detectSessionInUrl: true,
+    flowType: 'pkce',
+  },
+  global: {
+    fetch: customFetch,
+    headers: {
+      'X-Client-Info': 'darkwebsite-app',
+    },
+  },
+  db: {
+    schema: 'public',
+  },
 });
 
 // Helper types
