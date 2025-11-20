@@ -1,5 +1,6 @@
 import { eq, and, desc, asc, like, or, sql, inArray } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/mysql2";
+import { drizzle } from "drizzle-orm/neon-http";
+import { neon } from "@neondatabase/serverless";
 import { 
   InsertUser, users, 
   sellerApplications, InsertSellerApplication,
@@ -23,7 +24,8 @@ let _db: ReturnType<typeof drizzle> | null = null;
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
-      _db = drizzle(process.env.DATABASE_URL);
+      const sql = neon(process.env.DATABASE_URL);
+      _db = drizzle(sql);
     } catch (error) {
       console.warn("[Database] Failed to connect:", error);
       _db = null;
@@ -84,7 +86,8 @@ export async function upsertUser(user: InsertUser): Promise<void> {
       updateSet.lastSignedIn = new Date();
     }
 
-    await db.insert(users).values(values).onDuplicateKeyUpdate({
+    await db.insert(users).values(values).onConflictDoUpdate({
+      target: users.openId,
       set: updateSet,
     });
   } catch (error) {
@@ -297,10 +300,8 @@ export async function createProduct(data: InsertProduct) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
-  const result = await db.insert(products).values(data);
-  const insertId = Number(result[0].insertId);
-  
-  return getProductById(insertId);
+  const result = await db.insert(products).values(data).returning();
+  return result[0];
 }
 
 export async function updateProduct(id: number, data: Partial<InsertProduct>) {
@@ -403,15 +404,8 @@ export async function createTransaction(data: InsertTransaction) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
-  const result = await db.insert(transactions).values(data);
-  const insertId = Number(result[0].insertId);
-  
-  const transaction = await db.select()
-    .from(transactions)
-    .where(eq(transactions.id, insertId))
-    .limit(1);
-  
-  return transaction[0];
+  const result = await db.insert(transactions).values(data).returning();
+  return result[0];
 }
 
 export async function getTransactions(userId: number, limit = 50) {
@@ -547,10 +541,8 @@ export async function createOrder(data: InsertOrder) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
-  const result = await db.insert(orders).values(data);
-  const insertId = Number(result[0].insertId);
-  
-  return getOrderById(insertId);
+  const result = await db.insert(orders).values(data).returning();
+  return result[0];
 }
 
 export async function getOrderById(id: number) {
@@ -621,15 +613,8 @@ export async function createReview(data: InsertReview) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
-  const result = await db.insert(reviews).values(data);
-  const insertId = Number(result[0].insertId);
-  
-  const review = await db.select()
-    .from(reviews)
-    .where(eq(reviews.id, insertId))
-    .limit(1);
-  
-  return review[0];
+  const result = await db.insert(reviews).values(data).returning();
+  return result[0];
 }
 
 export async function getProductReviews(productId: number) {
@@ -665,15 +650,8 @@ export async function createWithdrawalRequest(data: InsertWithdrawalRequest) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
-  const result = await db.insert(withdrawalRequests).values(data);
-  const insertId = Number(result[0].insertId);
-  
-  const withdrawal = await db.select()
-    .from(withdrawalRequests)
-    .where(eq(withdrawalRequests.id, insertId))
-    .limit(1);
-  
-  return withdrawal[0];
+  const result = await db.insert(withdrawalRequests).values(data).returning();
+  return result[0];
 }
 
 export async function getUserWithdrawals(userId: number) {
@@ -794,15 +772,8 @@ export async function createDispute(data: InsertDispute) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
-  const result = await db.insert(disputes).values(data);
-  const insertId = Number(result[0].insertId);
-  
-  const dispute = await db.select()
-    .from(disputes)
-    .where(eq(disputes.id, insertId))
-    .limit(1);
-  
-  return dispute[0];
+  const result = await db.insert(disputes).values(data).returning();
+  return result[0];
 }
 
 export async function getOrderDispute(orderId: number) {
