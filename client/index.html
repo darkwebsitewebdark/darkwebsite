@@ -16,15 +16,14 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&family=Permanent+Marker&display=swap" rel="stylesheet" />
+    <!-- Preload critical logo image -->
+    <link rel="preload" as="image" href="/logo-dlnk-horizontal-400w.webp" type="image/webp" />
   </head>
 
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
-    <script
-      defer
-      src="%VITE_ANALYTICS_ENDPOINT%/umami"
-      data-website-id="%VITE_ANALYTICS_WEBSITE_ID%"></script>
+    <!-- Analytics script removed - configure VITE_ANALYTICS_ENDPOINT if needed -->
   </body>
 
 </html>

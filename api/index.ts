@@ -24,6 +24,15 @@ app.use((req, res, next) => {
   next();
 });
 
+// Add cache headers for performance
+app.use((req, res, next) => {
+  // Cache API responses for 60 seconds with stale-while-revalidate
+  if (req.path.startsWith('/trpc')) {
+    res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=300');
+  }
+  next();
+});
+
 // Mount tRPC middleware
 app.use(
   '/trpc',
